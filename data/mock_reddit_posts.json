@@ -1,0 +1,81 @@
+{
+  "u001": {
+    "username": "user_alpha",
+    "emergency_contacts": [
+      {"name": "Jane", "contact": "jane@example.com"}
+    ],
+    "connections": ["u002", "u003"],
+    "posts": [
+      {
+        "date": "2024-01-10",
+        "subreddit": "depression",
+        "text": "I haven't left my bed in three days. Everything feels pointless and I don't know why I bother anymore. Nothing brings me joy."
+      },
+      {
+        "date": "2024-01-12",
+        "subreddit": "mentalhealth",
+        "text": "Tried to go outside today but had a panic attack halfway down the block. Came straight back home. I feel so trapped."
+      },
+      {
+        "date": "2024-01-14",
+        "subreddit": "SuicideWatch",
+        "text": "I keep having thoughts that everyone would be better off without me. I don't want to feel this way but I can't stop these thoughts."
+      }
+    ]
+  },
+  "u002": {
+    "username": "user_beta",
+    "emergency_contacts": [
+      {"name": "Mom", "contact": "mom@example.com"}
+    ],
+    "connections": ["u001", "u004"],
+    "posts": [
+      {
+        "date": "2024-01-11",
+        "subreddit": "anxiety",
+        "text": "Work has been stressful this week but I managed it with some breathing exercises. Some days are harder than others but I'm coping."
+      },
+      {
+        "date": "2024-01-13",
+        "subreddit": "offmychest",
+        "text": "Had a rough meeting today but talked it through with my partner tonight. Feeling a bit better now. Grateful for the support."
+      }
+    ]
+  },
+  "u003": {
+    "username": "user_gamma",
+    "emergency_contacts": [],
+    "connections": ["u001"],
+    "posts": [
+      {
+        "date": "2024-01-09",
+        "subreddit": "happy",
+        "text": "Just got back from a great hike with friends. Nature really does help clear the mind. Feeling refreshed and grateful."
+      },
+      {
+        "date": "2024-01-15",
+        "subreddit": "wholesome",
+        "text": "Started a new book today and made a big batch of soup. Small things but they made me really happy. Life is good."
+      }
+    ]
+  },
+  "u004": {
+    "username": "user_delta",
+    "emergency_contacts": [
+      {"name": "Alex", "contact": "alex@example.com"}
+    ],
+    "connections": ["u002"],
+    "posts": [
+      {
+        "date": "2024-01-10",
+        "subreddit": "mentalhealth",
+        "text": "Therapy session was tough today but I feel like I'm making progress. My therapist helped me see some patterns I hadn't noticed."
+      },
+      {
+        "date": "2024-01-15",
+        "subreddit": "depression",
+        "text": "Can't sleep again. Three nights in a row. The darkness at 3am feels overwhelming and I don't know how much longer I can keep going like this."
+      }
+    ]
+  }
+}

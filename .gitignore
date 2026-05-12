@@ -1,0 +1,54 @@
+# --- Secrets ---
+.env
+.env.local
+.env.*.local
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+push_models.py
+
+# --- ML / Models (large binary files — use HuggingFace instead) ---
+/models/
+backend/models/mentalbert*/
+backend/models/v1/
+backend/models/v2/
+*.safetensors
+*.pt
+*.pth
+chroma_db/
+
+# --- Logs ---
+*.log
+logs/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- IDE ---
+.vscode/
+.idea/
+.claude/
+
+# --- Next.js ---
+frontend/.next/
+frontend/node_modules/
+frontend/.env.local
+frontend/.env.*.local
+frontend/out/
+
+# --- Misc ---
+dumps/
+docs/
+CHANGES.md

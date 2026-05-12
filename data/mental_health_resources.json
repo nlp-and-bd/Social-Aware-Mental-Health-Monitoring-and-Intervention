@@ -1,0 +1,92 @@
+[
+  {
+    "id": "r001",
+    "title": "Understanding Depression",
+    "category": "depression",
+    "content": "Depression is a common but serious mood disorder that causes persistent feelings of sadness, hopelessness, and loss of interest in activities once enjoyed. Symptoms include changes in sleep, appetite, energy level, concentration, and self-esteem. Depression is not a sign of weakness — it is a medical condition that responds well to treatment including therapy and, when appropriate, medication."
+  },
+  {
+    "id": "r002",
+    "title": "Coping with Anxiety",
+    "category": "anxiety",
+    "content": "Anxiety disorders involve more than temporary worry or fear. For a person with an anxiety disorder, the anxiety does not go away and can get worse over time. Effective coping strategies include deep breathing exercises, progressive muscle relaxation, grounding techniques (the 5-4-3-2-1 method), regular physical activity, limiting caffeine, and maintaining a consistent sleep schedule."
+  },
+  {
+    "id": "r003",
+    "title": "Crisis Resources India",
+    "category": "crisis",
+    "content": "If you or someone you know is in crisis, please reach out immediately. iCall (TISS): 9152987821 — free, confidential counselling by trained professionals. Vandrevala Foundation: 1860-2662-345 — 24/7 helpline. iCall chat support: icallhelpline.org. Snehi: 044-24640050. Remember: reaching out is a sign of strength, not weakness. You do not have to face this alone."
+  },
+  {
+    "id": "r004",
+    "title": "The 5-4-3-2-1 Grounding Technique",
+    "category": "coping",
+    "content": "When feeling overwhelmed or anxious, grounding techniques can bring you back to the present moment. The 5-4-3-2-1 method: Notice 5 things you can see around you. Notice 4 things you can physically feel. Notice 3 things you can hear. Notice 2 things you can smell. Notice 1 thing you can taste. This technique interrupts the anxiety cycle by redirecting attention to the present physical environment."
+  },
+  {
+    "id": "r005",
+    "title": "Sleep Hygiene for Mental Health",
+    "category": "coping",
+    "content": "Poor sleep and mental health are deeply connected. Good sleep hygiene practices include: keeping a consistent sleep schedule even on weekends, creating a relaxing bedtime routine, avoiding screens 1 hour before bed, keeping the bedroom cool and dark, avoiding caffeine after 2pm, and getting out of bed if you cannot sleep after 20 minutes. If insomnia persists, speak to a healthcare provider."
+  },
+  {
+    "id": "r006",
+    "title": "How to Talk to Someone You're Worried About",
+    "category": "support",
+    "content": "If you are concerned about a friend or family member's mental health: choose a private, calm moment to talk. Use 'I' statements: 'I've noticed you seem down lately and I care about you.' Listen without judgment — you don't need to have answers. Avoid minimising their feelings ('just cheer up') or giving unsolicited advice. Offer practical help like accompanying them to a first appointment. Know that your presence alone matters more than the right words."
+  },
+  {
+    "id": "r007",
+    "title": "Understanding Panic Attacks",
+    "category": "anxiety",
+    "content": "A panic attack is a sudden episode of intense fear that triggers severe physical reactions when there is no real danger or apparent cause. Symptoms include racing heart, shortness of breath, chest pain, dizziness, and feeling of unreality. Panic attacks are not dangerous despite feeling frightening. During an attack: focus on slow breathing (4 counts in, hold 4, out 4), remind yourself it will pass, and avoid fleeing the situation if safe to stay."
+  },
+  {
+    "id": "r008",
+    "title": "Self-Compassion Practices",
+    "category": "general",
+    "content": "Self-compassion means treating yourself with the same kindness you would offer a good friend. Research by Dr. Kristin Neff shows it has three components: self-kindness (being warm to yourself when suffering), common humanity (recognising suffering is part of the shared human experience), and mindfulness (holding painful thoughts in balanced awareness). A simple practice: place your hand on your heart, acknowledge your pain, and say 'This is a moment of suffering. Suffering is part of life. May I be kind to myself.'"
+  },
+  {
+    "id": "r009",
+    "title": "Exercise and Mental Health",
+    "category": "general",
+    "content": "Regular physical activity is one of the most effective tools for improving mental health. Exercise releases endorphins, reduces stress hormones like cortisol, improves sleep, and boosts self-esteem. You do not need intense workouts — a 20-30 minute walk three times a week has measurable effects on depression and anxiety. Start small: even 10 minutes of movement counts. Choose activities you enjoy to build consistency."
+  },
+  {
+    "id": "r010",
+    "title": "When to Seek Professional Help",
+    "category": "general",
+    "content": "Consider speaking to a mental health professional if: your symptoms have lasted more than two weeks, your daily functioning (work, relationships, self-care) is affected, you are using substances to cope, you have thoughts of harming yourself or others, or you simply feel you need support. Seeking help is a sign of self-awareness and strength. A therapist or counsellor can provide tools and strategies tailored specifically to you."
+  },
+  {
+    "id": "r011",
+    "title": "Journaling for Emotional Processing",
+    "category": "coping",
+    "content": "Writing about your thoughts and feelings can help process difficult emotions, reduce rumination, and gain perspective. Try expressive writing: for 15-20 minutes, write continuously about what is on your mind without editing or judging. Alternatively, try a gratitude journal — three specific things you appreciated today. Prompts to start: 'Right now I feel... because...', 'Something I need that I'm not giving myself is...', 'If my feelings could speak they would say...'"
+  },
+  {
+    "id": "r012",
+    "title": "Understanding Suicidal Thoughts",
+    "category": "crisis",
+    "content": "Having thoughts of suicide does not mean you want to die — it often means you are in pain and need immediate support. These thoughts are a symptom, not a decision. If you are having these thoughts: tell someone you trust, contact a crisis helpline (iCall: 9152987821), go to your nearest emergency room, or call emergency services. Remove access to means if possible. You deserve help and things can get better with the right support. Please reach out — you do not have to carry this alone."
+  },
+  {
+    "id": "r013",
+    "title": "Breathing Exercises for Stress Relief",
+    "category": "coping",
+    "content": "Controlled breathing activates the parasympathetic nervous system, calming the stress response. Box breathing (used by Navy SEALs): inhale for 4 counts, hold for 4, exhale for 4, hold for 4. Repeat 4 times. 4-7-8 breathing: inhale for 4 counts, hold for 7, exhale slowly for 8. Do this 3-4 times. Belly breathing: place one hand on your chest, one on your belly. Breathe so only the belly hand rises. These can be done anywhere and bring relief within minutes."
+  },
+  {
+    "id": "r014",
+    "title": "Building a Support Network",
+    "category": "support",
+    "content": "A strong social support network is one of the best protectors of mental health. To build yours: identify 2-3 people you feel safe with. Nurture relationships with small consistent contact rather than big gestures. Be willing to be vulnerable — sharing how you truly feel deepens connections. Join a community (hobby group, support group, volunteer organisation). If you feel isolated, online communities and support groups can be a starting point. Professional support (therapist, counsellor) is also a valid and important part of your network."
+  },
+  {
+    "id": "r015",
+    "title": "Managing Anger in Healthy Ways",
+    "category": "coping",
+    "content": "Anger is a normal emotion, but unmanaged anger can damage relationships and wellbeing. Healthy strategies: pause before reacting — even 10 seconds helps. Use 'I feel' statements instead of blame. Physical release: walk, run, squeeze a stress ball. Write an unsent letter to express what you feel. Identify the underlying emotion — anger often masks hurt, fear, or shame. If anger is frequent or intense, a therapist can help identify triggers and patterns."
+  }
+]

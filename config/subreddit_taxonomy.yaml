@@ -1,0 +1,173 @@
+# Subreddit -> category mapping. Phase 1 ingestion KEEPS only posts whose
+# subreddit falls into one of these categories. Anything not listed -> "general"
+# and is dropped (unless include_all_subreddits=True on the request).
+#
+# Categories:
+#   mental_health    -> clinical condition communities (primary signal)
+#   support          -> peer-support, sufferers helping each other
+#   support_partner  -> family/friends supporting MH sufferers (DIFFERENT clinical signal)
+#   recovery         -> addiction / habit recovery
+#   trigger          -> communities that may amplify ideation - flag, do not exclude
+#
+# Phase 3 must NOT pool support_partner with mental_health: the linguistic markers
+# of "I am depressed" vs "my partner is depressed" are different and a model trained
+# on the union will mis-classify both.
+#
+# Lowercase keys. Lookup is case-insensitive. Validate after every edit:
+#   python scripts/validate_taxonomy.py
+
+mental_health:
+  # Mood & anxiety
+  - depression
+  - depression_help
+  - depressed
+  - anxiety
+  - anxietydepression
+  - socialanxiety
+  - panicdisorder
+  - panicattack
+  - hsp
+  # General MH
+  - mentalhealth
+  - mentalillness
+  - mentalhealthsupport
+  - mentalhealthuk
+  - mentalhealthph
+  - askdocs
+  - askpsychiatry
+  - therapists
+  - talktherapy
+  # Personality / mood disorders
+  - bpd
+  - borderlinepdisorder
+  - bipolar
+  - bipolarreddit
+  - bipolar2
+  - cyclothymia
+  - npd
+  # Trauma
+  - ptsd
+  - cptsd
+  - ptsdcombat
+  - cptsdmemes
+  - cptsdnextsteps
+  - traumatoolbox
+  - traumatherapy
+  - emotionalneglect
+  # OCD spectrum
+  - ocd
+  - rocd
+  - hocd
+  - pocd
+  - dermatillomania
+  - trichotillomania
+  # Psychotic spectrum
+  - schizophrenia
+  - schizoaffective
+  - psychosis
+  # Neurodevelopmental
+  - adhd
+  - adhdwomen
+  - twoxadhd
+  - adhdmemes
+  - autism
+  - aspergers
+  - autisminwomen
+  - autisticadults
+  - autismtranslated
+  - neurodivergent
+  # Dissociative
+  - dpdr
+  - depersonalization
+  - did
+  - dissociativeidisorder
+  - osdd
+  # Eating disorders
+  - eatingdisorders
+  - edanonymous
+  - anorexianervosa
+  - bulimia
+  - bingeeatingdisorder
+  - arfid
+  - fuckeatingdisorders
+  # Self-harm (clinical, not promotional)
+  - selfharm
+  - adultselfharm
+  # Sleep / somatic
+  - insomnia
+  - sleep
+  # Medication
+  - antidepressants
+  - lexapro
+  - zoloft
+  - prozac
+  - effexor
+
+support:
+  # Crisis / direct support
+  - suicidewatch
+  - kindvoice
+  - helpme
+  - venting
+  - rant
+  # Peer support (sufferers)
+  - offmychest
+  - trueoffmychest
+  - lonely
+  - foreveralone
+  - decidingtobebetter
+  - selfimprovement
+  - selfhelp
+  # Family-of-origin trauma support (sufferer perspective)
+  - raisedbynarcissists
+  - raisedbyborderlines
+  - estrangedadultchild
+  - momforaminute
+  - dadforaminute
+  - internetparents
+  - adultchildren
+  # Grief
+  - griefsupport
+  - widowers
+  - childloss
+  - babyloss
+  - petloss
+  - grieving
+  # Identity-based (high MH overlap)
+  - asktransgender
+
+support_partner:
+  # Family/friends of someone with MH or substance issues - distinct clinical voice
+  - depression_partners
+  - bpdlovedones
+  - bipolarsos
+  - schizoidlovedones
+  - autism_parenting
+  - cptsdpartners
+  - naranon
+  - codependency
+
+recovery:
+  # Substance
+  - stopdrinking
+  - redditorsinrecovery
+  - opiatesrecovery
+  - benzorecovery
+  - methrecovery
+  - alcoholicsanonymous
+  - sober
+  - leaves                 # cannabis cessation
+  - alcoholism
+  - addiction
+  - recovery
+  - recoverydharma
+  - smartrecovery
+  # Behavioral
+  - nofap
+  - pornfree
+  - stopgaming
+  - stopspeeding
+
+trigger:
+  # Pro-disordered communities - capture but flag
+  - 1200isplenty           # debated; review
