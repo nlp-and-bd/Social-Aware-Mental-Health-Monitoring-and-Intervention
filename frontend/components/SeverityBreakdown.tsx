@@ -1,6 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
+import { BarChart2 } from "lucide-react"
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
 } from "recharts"
@@ -38,7 +39,7 @@ export function SeverityBreakdown({ results }: { results: PostSeverityResult[] }
   if (results.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <div className="w-12 h-12 rounded-2xl bg-muted/60 flex items-center justify-center text-2xl">📊</div>
+        <div className="w-12 h-12 rounded-2xl bg-muted/60 flex items-center justify-center"><BarChart2 className="w-6 h-6 text-muted-foreground" /></div>
         <p className="text-sm text-muted-foreground">No posts classified yet.</p>
       </div>
     )

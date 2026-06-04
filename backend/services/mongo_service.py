@@ -17,6 +17,7 @@ async def connect():
     await _db.command("ping")  # fail fast if credentials / network are wrong
     await _db["posts"].create_index("user_id")
     await _db["users"].create_index("severity_label")
+    await _db["users"].create_index("username", unique=True, sparse=True)
     await _db["posts"].create_index([("user_id", 1), ("severity", 1)])  # compound for classify
 
 
@@ -31,6 +32,10 @@ async def get_user(user_id: str) -> dict | None:
     return await _db["users"].find_one({"_id": user_id})
 
 
+async def find_user_by_username(username: str) -> dict | None:
+    return await _db["users"].find_one({"username": username})
+
+
 async def upsert_user(user_id: str, username: str, emergency_contacts: list, connections: list):
     now = datetime.now(timezone.utc).isoformat()
     await _db["users"].update_one(
@@ -38,6 +43,7 @@ async def upsert_user(user_id: str, username: str, emergency_contacts: list, con
         {"$setOnInsert": {
             "_id": user_id,
             "username": username,
+            "display_name": "",
             "severity_score": 0.0,
             "severity_label": "Low",
             "severity_history": [],
@@ -54,25 +60,73 @@ async def upsert_user(user_id: str, username: str, emergency_contacts: list, con
     )
 
 
-async def set_consent(user_id: str, username: str, emergency_contacts: list):
+async def set_consent(user_id: str, username: str, display_name: str | None = None):
+    """Mark onboarding consent given + persist the Reddit handle and real name.
+    Emergency contacts are reconciled separately (contact_service) so the consent
+    double-opt-in tokens are generated and emailed correctly."""
+    update = {"consent_given": True, "username": username}
+    if display_name is not None:
+        update["display_name"] = display_name
+    await _db["users"].update_one({"_id": user_id}, {"$set": update})
+
+
+async def set_display_name(user_id: str, display_name: str):
     await _db["users"].update_one(
         {"_id": user_id},
+        {"$set": {"display_name": display_name}},
+    )
+
+
+async def grant_contact_consent(token: str) -> dict | None:
+    """
+    Flip an emergency contact from 'pending' to 'granted' using the token from the
+    emailed confirmation link. Returns {contact_name, user_display} for the
+    thank-you page, or None if the token is unknown/expired. The token is nulled on
+    success so the link can't be reused.
+    """
+    if not token:
+        return None
+    user = await _db["users"].find_one({"emergency_contacts.consent_token": token})
+    if not user:
+        return None
+    contact = next(
+        (c for c in user.get("emergency_contacts", []) if c.get("consent_token") == token),
+        None,
+    )
+    if not contact:
+        return None
+    await _db["users"].update_one(
+        {"_id": user["_id"], "emergency_contacts.consent_token": token},
         {"$set": {
-            "consent_given": True,
-            "username": username,
-            "emergency_contacts": [c if isinstance(c, dict) else c.model_dump() for c in emergency_contacts],
+            "emergency_contacts.$.consent_status": "granted",
+            "emergency_contacts.$.details_consent": True,
+            "emergency_contacts.$.consent_token": None,
         }},
     )
+    return {
+        "contact_name": contact.get("name", "there"),
+        "user_display": user.get("display_name") or "someone who trusts you",
+    }
 
 
 async def update_severity(user_id: str, label: str, score: float):
     now = datetime.now(timezone.utc).isoformat()
-    entry = {"label": label, "score": round(score, 4), "timestamp": now}
-    await _db["users"].update_one(
-        {"_id": user_id},
-        {"$set": {"severity_label": label, "severity_score": round(score, 4), "last_active": now},
-         "$push": {"severity_history": entry}},
-    )
+    score = round(score, 4)
+
+    # Always refresh the current label/score/last_active.
+    update: dict = {"$set": {"severity_label": label, "severity_score": score, "last_active": now}}
+
+    # Only append to severity_history when the result actually changed since the
+    # last recorded point. Classify+evaluate run on every dashboard load, so an
+    # unconditional $push would balloon the history with duplicate entries and
+    # skew the trend calculation.
+    user = await _db["users"].find_one({"_id": user_id}, {"severity_history": {"$slice": -1}})
+    last = (user or {}).get("severity_history") or []
+    last_entry = last[-1] if last else None
+    if not last_entry or last_entry.get("label") != label or last_entry.get("score") != score:
+        update["$push"] = {"severity_history": {"label": label, "score": score, "timestamp": now}}
+
+    await _db["users"].update_one({"_id": user_id}, update)
 
 
 async def append_chat_turn(user_id: str, role: str, content: str, conversation_id: str = ""):
@@ -113,6 +167,20 @@ async def add_notification(user_id: str, from_user: str, message: str):
     await _db["users"].update_one(
         {"_id": user_id},
         {"$push": {"notifications": {"from_user": from_user, "message": message, "timestamp": now}}},
+    )
+
+
+async def add_notification_log(user_id: str, email_type: str, results: list[dict]):
+    """Append an audit record of an emergency-contact mailing run to notification_log[]."""
+    now = datetime.now(timezone.utc).isoformat()
+    entry = {
+        "timestamp": now,
+        "email_type": email_type,
+        "results": results,  # list of {name, contact, status, reason}
+    }
+    await _db["users"].update_one(
+        {"_id": user_id},
+        {"$push": {"notification_log": entry}},
     )
 
 

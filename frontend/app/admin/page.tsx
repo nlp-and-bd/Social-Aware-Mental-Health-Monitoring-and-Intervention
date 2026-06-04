@@ -1,15 +1,16 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { api, type AdminUser, type AdminResponse } from "@/lib/api"
 import { SeverityBadge, severityColor } from "@/components/SeverityBadge"
+import { Users, AlertCircle, AlertTriangle, BarChart2 } from "lucide-react"
 
 const SEV_ORDER = ["Critical", "High", "Medium", "Low"]
 
 function StatCard({ label, value, sub, accent, icon }: {
-  label: string; value: string | number; sub?: string; accent?: string; icon: string
+  label: string; value: string | number; sub?: string; accent?: string; icon: React.ReactNode
 }) {
   return (
     <motion.div
@@ -123,17 +124,61 @@ function UserRow({ user, index, onView }: { user: AdminUser; index: number; onVi
 
 export default function AdminPage() {
   const router = useRouter()
-  const [data, setData] = useState<AdminResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [sortBy, setSortBy] = useState<"severity" | "score" | "posts" | "active">("severity")
+  const [data, setData]           = useState<AdminResponse | null>(null)
+  const [loading, setLoading]     = useState(true)
+  const [error, setError]         = useState<string | null>(null)
+  const [sortBy, setSortBy]       = useState<"severity" | "score" | "posts" | "active">("severity")
   const [filterSev, setFilterSev] = useState<string>("all")
 
-  useEffect(() => {
+  // JWT login gate
+  const [showLogin, setShowLogin]     = useState(false)
+  const [password, setPassword]       = useState("")
+  const [loginError, setLoginError]   = useState("")
+  const [loginLoading, setLoginLoading] = useState(false)
+  const [loginFocused, setLoginFocused] = useState(false)
+
+  async function handleLogin() {
+    if (!password.trim()) return
+    setLoginLoading(true)
+    setLoginError("")
+    try {
+      const res = await api.adminLogin(password)
+      sessionStorage.setItem("admin_token", res.token)
+      setShowLogin(false)
+      setPassword("")
+      loadData()
+    } catch (e: unknown) {
+      setLoginError((e as Error).message)
+    } finally {
+      setLoginLoading(false) }
+  }
+
+  function loadData() {
+    setLoading(true)
+    setError(null)
     api.adminData()
       .then(setData)
-      .catch((e) => setError((e as Error).message))
+      .catch((e: unknown) => {
+        const msg = (e as Error).message
+        if (msg.includes("401") || msg.includes("token") || msg.includes("Invalid") || msg.includes("expired")) {
+          sessionStorage.removeItem("admin_token")
+          setShowLogin(true)
+        } else {
+          setError(msg)
+        }
+      })
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? sessionStorage.getItem("admin_token") : null
+    if (!token) {
+      setShowLogin(true)
+      setLoading(false)
+    } else {
+      loadData()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const sorted = [...(data?.users ?? [])].sort((a, b) => {
@@ -152,7 +197,69 @@ export default function AdminPage() {
     : 0
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+
+      {/* ── Admin login overlay ── */}
+      <AnimatePresence>
+        {showLogin && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-background/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.93, opacity: 0, y: 16 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.93, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              className="bg-card rounded-2xl border shadow-2xl p-8 w-full max-w-sm space-y-6"
+            >
+              <div className="flex items-center gap-3">
+                <img src="/logo.png" alt="Penumbra" style={{ width: "36px", height: "36px" }} />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Admin Access</p>
+                  <p className="text-[11px] text-muted-foreground">Enter the admin password to continue</p>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Password</label>
+                <div
+                  className="flex items-center rounded-xl border-2 bg-background px-3 py-2.5 transition-all"
+                  style={{ borderColor: loginFocused ? "#6d28d9" : "var(--border)", boxShadow: loginFocused ? "0 0 0 3px rgba(109,40,217,0.10)" : "none" }}
+                >
+                  <input
+                    autoFocus
+                    type="password"
+                    className="flex-1 bg-transparent text-sm focus:outline-none"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                    onFocus={() => setLoginFocused(true)}
+                    onBlur={() => setLoginFocused(false)}
+                    disabled={loginLoading}
+                  />
+                </div>
+                {loginError && <p className="text-xs text-rose-500">{loginError}</p>}
+              </div>
+
+              <motion.button
+                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                onClick={handleLogin}
+                disabled={loginLoading || !password.trim()}
+                className="w-full rounded-xl py-3 text-sm font-bold text-white disabled:opacity-50 shadow-sm"
+                style={{ background: "linear-gradient(135deg, #6d28d9, #8b5cf6)" }}
+              >
+                {loginLoading ? "Verifying…" : "Access Admin Dashboard"}
+              </motion.button>
+
+              <p className="text-center text-[10px] text-muted-foreground/50">
+                Set ADMIN_PASSWORD in .env to enable access
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Header */}
       <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10">
@@ -162,7 +269,7 @@ export default function AdminPage() {
             <div className="h-5 w-px bg-border" />
             <div>
               <p className="text-xs font-semibold text-foreground">Admin Dashboard</p>
-              <p className="text-[10px] text-muted-foreground">Population-level view · No user data is exposed</p>
+              <p className="text-[10px] text-muted-foreground">Population-level view</p>
             </div>
           </div>
           <motion.button
@@ -199,7 +306,7 @@ export default function AdminPage() {
           <div className="rounded-2xl border border-rose-200 bg-rose-50/60 p-6 text-sm text-rose-700 space-y-1">
             <p className="font-semibold">Failed to load admin data</p>
             <p className="text-xs opacity-80">{error}</p>
-            <p className="text-xs opacity-60">Make sure the backend is running: <code>uvicorn backend.main:app --reload --port 8002</code></p>
+            <p className="text-xs opacity-60">Make sure the backend is running: <code>uvicorn backend.main:app --reload --reload-dir backend --port 8002</code></p>
           </div>
         )}
 
@@ -207,13 +314,13 @@ export default function AdminPage() {
           <>
             {/* Stats row */}
             <div className="flex gap-4 flex-wrap">
-              <StatCard label="Total users" value={stats?.total_users ?? 0} sub="in the system" icon="👥" />
+              <StatCard label="Total users" value={stats?.total_users ?? 0} sub="in the system" icon={<Users className="w-5 h-5 text-muted-foreground" />} />
               <StatCard label="Critical" value={stats?.critical_count ?? 0}
-                sub="need immediate attention" accent="#b84040" icon="🔴" />
+                sub="need immediate attention" accent="#b84040" icon={<AlertCircle className="w-5 h-5" style={{ color: "#b84040" }} />} />
               <StatCard label="High severity" value={stats?.high_count ?? 0}
-                sub="elevated distress" accent="#c4713c" icon="🟠" />
+                sub="elevated distress" accent="#c4713c" icon={<AlertTriangle className="w-5 h-5" style={{ color: "#c4713c" }} />} />
               <StatCard label="Avg distress" value={`${avgScore}%`}
-                sub="across all users" accent="#6d28d9" icon="📊" />
+                sub="across all users" accent="#6d28d9" icon={<BarChart2 className="w-5 h-5" style={{ color: "#6d28d9" }} />} />
             </div>
 
             {/* Severity distribution bar */}
@@ -295,7 +402,7 @@ export default function AdminPage() {
                       ) : (
                         sorted.map((u, i) => (
                           <UserRow key={u.user_id} user={u} index={i}
-                            onView={() => router.push(`/dashboard/${u.user_id}`)} />
+                            onView={() => router.push(`/dashboard/${u.user_id}?admin=1`)} />
                         ))
                       )}
                     </AnimatePresence>

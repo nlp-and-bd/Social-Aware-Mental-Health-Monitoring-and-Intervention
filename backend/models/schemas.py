@@ -42,6 +42,9 @@ class ClassifyRequest(BaseModel):
 class PostSeverityResult(BaseModel):
     post_id: str
     text_snippet: str
+    text: str = ""          # full post text — powers the expandable post view
+    subreddit: str = ""
+    date: str = ""
     severity: str
     confidence: float
     timestamp: str
@@ -84,6 +87,41 @@ class EvaluateResponse(BaseModel):
     helplines: list[dict]
 
 
+# --- Emergency contact notification flow ---
+
+class NotifyPreviewRequest(BaseModel):
+    user_id: str
+
+class NotifyPreviewResponse(BaseModel):
+    summary: str                # AI-generated, gentle description of the user's recent state
+    subject: str
+    body: str                   # full rendered "with_details" email body the contact would receive
+
+class ContactSelection(BaseModel):
+    name: str
+    contact: str
+    custom_message: Optional[str] = None
+
+class SendNotificationRequest(BaseModel):
+    user_id: str
+    email_type: str             # "check_in" | "with_details" | "custom"
+    contacts: list[ContactSelection]
+
+class NotificationResult(BaseModel):
+    name: str
+    contact: str
+    status: str                 # "sent" | "simulated" | "skipped" | "failed"
+    reason: Optional[str] = None
+
+class SendNotificationResponse(BaseModel):
+    user_id: str
+    email_type: str
+    sent: int
+    failed: int
+    skipped: int
+    results: list[NotificationResult]
+
+
 # --- Notifications ---
 
 class Notification(BaseModel):
@@ -101,10 +139,25 @@ class NotificationsResponse(BaseModel):
 class EmergencyContact(BaseModel):
     name: str
     contact: str
+    notify: bool = True
+    # True only once this person has confirmed (via the emailed double-opt-in link)
+    # that they agree to receive details. Required before "with_details" / "custom"
+    # emails may be sent to them. On input this expresses the *intent* to request
+    # their consent; on output it reflects whether consent was actually granted.
+    details_consent: bool = False
+    # "none"    → no details consent requested for this contact
+    # "pending" → a consent-request email was sent, awaiting confirmation
+    # "granted" → the contact confirmed via the emailed link
+    consent_status: str = "none"
+    email_type: str = "check_in"   # legacy default; live choice now made at crisis time
+    custom_message: Optional[str] = None
+    # NOTE: the per-contact consent_token lives only in MongoDB and is deliberately
+    # NOT declared here, so it can never leak into an API response.
 
 class UserProfile(BaseModel):
     user_id: str
-    username: str
+    username: str             # Reddit handle (shown once in the dashboard, never in emails)
+    display_name: Optional[str] = None  # real name; used across the UI and in emails
     severity_score: float
     severity_label: str
     severity_history: list[dict]
@@ -117,4 +170,5 @@ class UserProfile(BaseModel):
 class ConsentRequest(BaseModel):
     user_id: str
     username: str
+    display_name: Optional[str] = None
     emergency_contacts: list[EmergencyContact]

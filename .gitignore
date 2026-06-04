@@ -1,32 +1,58 @@
-# --- Secrets ---
+# ──────────────────────────────────────────────────────────────
+#  Penumbra — .gitignore
+# ──────────────────────────────────────────────────────────────
+
+# --- Secrets (NEVER commit) ---
 .env
+.env.*
+!.env.example
 .env.local
 .env.*.local
+*.pem
+# local SMTP credential check — keep creds out of git
+test_smtp.py
 
 # --- Python ---
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*.egg
+*.egg-info/
 .Python
 venv/
 .venv/
 env/
-*.egg-info/
+.python-version
 dist/
 build/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+# HuggingFace push helper (uses local hf token)
 push_models.py
 
-# --- ML / Models (large binary files — use HuggingFace instead) ---
+# --- ML / Models (large binaries — pull from HuggingFace instead) ---
+# /models/ is anchored to repo root — does NOT match backend/models/
 /models/
 backend/models/mentalbert*/
 backend/models/v1/
 backend/models/v2/
 *.safetensors
+*.bin
 *.pt
 *.pth
+*.ckpt
+*.onnx
+*.gguf
+*.h5
+*.msgpack
 chroma_db/
+# local HuggingFace / embeddings cache
+.cache/
+
+# Keep Pydantic schemas — they live under backend/models/ but are NOT weights
+!backend/models/schemas.py
+!backend/models/__init__.py
 
 # --- Logs ---
 *.log
@@ -35,18 +61,22 @@ logs/
 # --- OS ---
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# --- IDE ---
+# --- IDE / tooling ---
 .vscode/
 .idea/
 .claude/
+*.swp
 
-# --- Next.js ---
+# --- Next.js / Node (root-level safety net; frontend/.gitignore is authoritative) ---
+node_modules/
 frontend/.next/
 frontend/node_modules/
+frontend/out/
 frontend/.env.local
 frontend/.env.*.local
-frontend/out/
+*.tsbuildinfo
 
 # --- Misc ---
 dumps/

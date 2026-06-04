@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.services import mongo_service
 from backend.services.nlp_service import load_model
 from backend.services.rag_service import initialize_rag
-from backend.routers import auth, ingestion, graph, nlp, chatbot, response_engine, admin
+from backend.routers import auth, ingestion, graph, nlp, chatbot, response_engine, admin, contacts
 
 
 @asynccontextmanager
@@ -36,6 +36,7 @@ app.include_router(nlp.router,             prefix="/api")
 app.include_router(chatbot.router,         prefix="/api")
 app.include_router(response_engine.router, prefix="/api")
 app.include_router(admin.router,           prefix="/api")
+app.include_router(contacts.router,        prefix="/api")
 
 
 @app.get("/")

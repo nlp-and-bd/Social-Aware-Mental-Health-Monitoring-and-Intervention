@@ -22,16 +22,20 @@ async def classify(req: ClassifyRequest):
             PostSeverityResult(
                 post_id=p["_id"],
                 text_snippet=p["text"][:120],
+                text=p.get("text", ""),
+                subreddit=p.get("subreddit", ""),
+                date=p.get("date", ""),
                 severity=p["severity"],
                 confidence=p["confidence"],
                 timestamp=p["classified_at"],
             )
             for p in classified
         ]
-        # Re-aggregate with recency weighting using existing classifications
+        # Re-aggregate with recency weighting using existing classifications.
+        # Do NOT call update_severity here — no new posts were classified,
+        # so writing to severity_history would add a spurious data point on every login.
         raw = [{"severity": p["severity"], "confidence": p["confidence"], "date": p.get("date", "")} for p in classified]
         agg_label, agg_score = nlp_service.aggregate_severity(raw)
-        await mongo_service.update_severity(req.user_id, agg_label, agg_score)
         return ClassifyResponse(
             user_id=req.user_id,
             results=results,
@@ -56,6 +60,9 @@ async def classify(req: ClassifyRequest):
         results.append(PostSeverityResult(
             post_id=post["_id"],
             text_snippet=post["text"][:120],
+            text=post.get("text", ""),
+            subreddit=post.get("subreddit", ""),
+            date=post.get("date", ""),
             severity=severity,
             confidence=confidence,
             timestamp=now,
@@ -66,6 +73,48 @@ async def classify(req: ClassifyRequest):
 
     return ClassifyResponse(
         user_id=req.user_id,
+        results=results,
+        aggregate_severity=agg_label,
+        severity_score=agg_score,
+    )
+
+
+@router.get("/classify/{user_id}", response_model=ClassifyResponse)
+async def get_classified(user_id: str):
+    """
+    Read-only: return a user's already-classified posts without running the model
+    or writing anything (no severity_history mutation). Used by the admin view so
+    inspecting a profile never alters that user's data.
+    """
+    user = await mongo_service.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail=f"User '{user_id}' not found.")
+
+    all_posts = await mongo_service.get_all_posts(user_id)
+    classified = [p for p in all_posts if p.get("severity")]
+    results = [
+        PostSeverityResult(
+            post_id=p["_id"],
+            text_snippet=p["text"][:120],
+            text=p.get("text", ""),
+            subreddit=p.get("subreddit", ""),
+            date=p.get("date", ""),
+            severity=p["severity"],
+            confidence=p["confidence"],
+            timestamp=p.get("classified_at", ""),
+        )
+        for p in classified
+    ]
+
+    raw = [{"severity": p["severity"], "confidence": p["confidence"], "date": p.get("date", "")} for p in classified]
+    if raw:
+        agg_label, agg_score = nlp_service.aggregate_severity(raw)
+    else:
+        agg_label = user.get("severity_label", "Low")
+        agg_score = user.get("severity_score", 0.0)
+
+    return ClassifyResponse(
+        user_id=user_id,
         results=results,
         aggregate_severity=agg_label,
         severity_score=agg_score,

@@ -6,11 +6,19 @@ import { toast } from "sonner"
 import { api } from "@/lib/api"
 import type { UserProfile } from "@/lib/api"
 
-interface Contact { name: string; contact: string }
+type ConsentStatus = "none" | "pending" | "granted"
+
+interface Contact {
+  name: string
+  contact: string
+  notify: boolean
+  details_consent: boolean
+  consent_status: ConsentStatus
+}
 
 interface Props {
   user: UserProfile
-  onContactsUpdated: (contacts: Contact[]) => void
+  onContactsUpdated: (contacts: UserProfile["emergency_contacts"], displayName: string) => void
   onPostsCleared: () => void
   onAccountDeleted: () => void
 }
@@ -47,20 +55,40 @@ function ConfirmDialog({ message, onConfirm, onCancel, danger }: {
   )
 }
 
+function defaultContact(): Contact {
+  return { name: "", contact: "", notify: true, details_consent: false, consent_status: "none" }
+}
+
+function hydrateContact(raw: { name: string; contact: string; notify?: boolean; details_consent?: boolean; consent_status?: ConsentStatus }): Contact {
+  const status: ConsentStatus = raw.consent_status ?? (raw.details_consent ? "granted" : "none")
+  return {
+    name: raw.name,
+    contact: raw.contact,
+    notify: raw.notify ?? true,
+    // On the toggle, "on" means the user wants details shared — i.e. consent is
+    // either already granted or has been requested (pending).
+    details_consent: status !== "none",
+    consent_status: status,
+  }
+}
+
 export function SettingsPanel({ user, onContactsUpdated, onPostsCleared, onAccountDeleted }: Props) {
+  const [displayName, setDisplayName] = useState(user.display_name?.trim() || "")
   const [contacts, setContacts] = useState<Contact[]>(
-    user.emergency_contacts.length > 0 ? user.emergency_contacts : [{ name: "", contact: "" }]
+    user.emergency_contacts.length > 0
+      ? user.emergency_contacts.map(hydrateContact)
+      : [defaultContact()]
   )
   const [savingContacts, setSavingContacts] = useState(false)
   const [confirm, setConfirm] = useState<"posts" | "account" | null>(null)
   const [busy, setBusy] = useState(false)
 
-  function updateContact(i: number, field: "name" | "contact", value: string) {
+  function updateField<K extends keyof Contact>(i: number, field: K, value: Contact[K]) {
     setContacts((c) => c.map((x, j) => j === i ? { ...x, [field]: value } : x))
   }
 
   function addContact() {
-    if (contacts.length < 3) setContacts((c) => [...c, { name: "", contact: "" }])
+    if (contacts.length < 3) setContacts((c) => [...c, defaultContact()])
   }
 
   function removeContact(i: number) {
@@ -83,9 +111,27 @@ export function SettingsPanel({ user, onContactsUpdated, onPostsCleared, onAccou
       return
     }
     try {
-      await api.updateContacts(user.user_id, valid)
-      onContactsUpdated(valid)
-      toast.success("Emergency contacts updated")
+      await api.updateContacts(
+        user.user_id,
+        valid.map((c) => ({
+          name: c.name,
+          contact: c.contact,
+          notify: c.notify,
+          details_consent: c.details_consent,
+          email_type: "check_in",
+        })),
+        displayName.trim() || undefined,
+      )
+      // Re-fetch so per-contact consent status (pending/granted) is accurate.
+      const fresh = await api.graphUser(user.user_id)
+      setContacts(fresh.emergency_contacts.length > 0 ? fresh.emergency_contacts.map(hydrateContact) : [defaultContact()])
+      onContactsUpdated(fresh.emergency_contacts, fresh.display_name?.trim() || "")
+      const requested = valid.filter((c) => c.details_consent && c.contact.includes("@")).length
+      toast.success(
+        requested > 0
+          ? "Saved. We've emailed a confirmation request to contacts you asked to share details with."
+          : "Emergency contacts updated"
+      )
     } catch (e: unknown) {
       toast.error((e as Error).message)
     } finally { setSavingContacts(false) }
@@ -138,45 +184,117 @@ export function SettingsPanel({ user, onContactsUpdated, onPostsCleared, onAccou
 
       <div className="max-w-xl mx-auto w-full space-y-5">
 
+        {/* Your profile */}
+        <div className="rounded-2xl border bg-card p-5 shadow-sm space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Your name</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Shown across your dashboard and used when introducing you to your contacts. Your Reddit handle (<span className="font-medium">u/{user.username}</span>) is never shared with them. Saved with your contacts below.
+            </p>
+          </div>
+          <input
+            className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            placeholder="e.g. Alex"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+          />
+        </div>
+
         {/* Emergency contacts */}
         <div className="rounded-2xl border bg-card p-5 shadow-sm space-y-4">
           <div>
             <h3 className="text-sm font-semibold text-foreground">Emergency contacts</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              These people receive a gentle check-in prompt if your distress reaches Critical. They never see your data.
+              Contacted only if you choose to reach out in a crisis. You decide who, and exactly what they receive, at that moment.
             </p>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {contacts.map((c, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="flex gap-2 items-center"
+                className="rounded-xl border bg-background p-3 space-y-3"
               >
-                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
-                  {i + 1}
+                {/* Name + contact + remove */}
+                <div className="flex gap-2 items-center">
+                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+                    {i + 1}
+                  </div>
+                  <input
+                    className="flex-1 rounded-lg border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    placeholder="Name"
+                    value={c.name}
+                    onChange={(e) => updateField(i, "name", e.target.value)}
+                  />
+                  <input
+                    className="flex-1 rounded-lg border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    placeholder="Email or phone"
+                    value={c.contact}
+                    onChange={(e) => updateField(i, "contact", e.target.value)}
+                  />
+                  <button
+                    onClick={() => removeContact(i)}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors flex-shrink-0"
+                  >
+                    ×
+                  </button>
                 </div>
-                <input
-                  className="flex-1 rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  placeholder="Name"
-                  value={c.name}
-                  onChange={(e) => updateContact(i, "name", e.target.value)}
-                />
-                <input
-                  className="flex-1 rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  placeholder="Email or phone"
-                  value={c.contact}
-                  onChange={(e) => updateContact(i, "contact", e.target.value)}
-                />
-                <button
-                  onClick={() => removeContact(i)}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-50 transition-colors flex-shrink-0"
-                >
-                  ×
-                </button>
+
+                {/* Notify toggle */}
+                <div className="flex items-center justify-between px-1">
+                  <div>
+                    <p className="text-xs font-medium text-foreground">Include in crisis outreach</p>
+                    <p className="text-xs text-muted-foreground">Show this person as an option when you reach out</p>
+                  </div>
+                  <button
+                    onClick={() => updateField(i, "notify", !c.notify)}
+                    className={`relative w-10 h-[22px] rounded-full transition-colors flex-shrink-0 ${c.notify ? "bg-primary" : "bg-muted-foreground/30"}`}
+                  >
+                    <div className={`absolute top-[3px] left-[3px] w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${c.notify ? "translate-x-[18px]" : "translate-x-0"}`} />
+                  </button>
+                </div>
+
+                {/* Details consent toggle (only when notify=true) */}
+                <AnimatePresence>
+                  {c.notify && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="flex items-center justify-between px-1 pt-1">
+                        <div className="pr-3">
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-medium text-foreground">Ask permission to share details</p>
+                            {c.consent_status === "granted" && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">Confirmed</span>
+                            )}
+                            {c.consent_status === "pending" && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">Awaiting confirmation</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {c.consent_status === "granted"
+                              ? "They've confirmed — you can share how you're doing or a personal note with them."
+                              : c.consent_status === "pending"
+                              ? "We've emailed them a confirmation link. Details unlock once they agree."
+                              : "We'll email them a confirmation link. Only after they agree can you share details."}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => updateField(i, "details_consent", !c.details_consent)}
+                          className={`relative w-10 h-[22px] rounded-full transition-colors flex-shrink-0 ${c.details_consent ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
+                        >
+                          <div className={`absolute top-[3px] left-[3px] w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${c.details_consent ? "translate-x-[18px]" : "translate-x-0"}`} />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             ))}
           </div>
@@ -213,7 +331,7 @@ export function SettingsPanel({ user, onContactsUpdated, onPostsCleared, onAccou
             </div>
             <button
               onClick={() => setConfirm("posts")} disabled={busy}
-              className="ml-4 flex-shrink-0 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+              className="ml-4 flex-shrink-0 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:border-rose-400/25 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 dark:text-rose-300 px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
             >
               Clear posts
             </button>
@@ -221,8 +339,8 @@ export function SettingsPanel({ user, onContactsUpdated, onPostsCleared, onAccou
         </div>
 
         {/* Danger zone */}
-        <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-5 shadow-sm space-y-3">
-          <h3 className="text-sm font-semibold text-rose-700">Danger zone</h3>
+        <div className="rounded-2xl border border-rose-200 bg-rose-50/50 dark:border-rose-400/20 dark:bg-rose-950/25 p-5 shadow-sm space-y-3">
+          <h3 className="text-sm font-semibold text-rose-700 dark:text-rose-300">Danger zone</h3>
 
           <div className="flex items-start justify-between">
             <div>

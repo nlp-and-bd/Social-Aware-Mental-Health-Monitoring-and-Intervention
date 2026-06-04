@@ -5,6 +5,7 @@ import {
   Tooltip, ReferenceLine, ResponsiveContainer,
 } from "recharts"
 import { motion } from "framer-motion"
+import { TrendingUp } from "lucide-react"
 
 interface HistoryEntry { label: string; score: number; timestamp: string }
 
@@ -32,7 +33,7 @@ export function SeverityTimeline({ history }: { history: HistoryEntry[] }) {
         animate={{ opacity: 1 }}
         className="flex flex-col items-center justify-center h-48 gap-3"
       >
-        <div className="w-12 h-12 rounded-2xl bg-muted/60 flex items-center justify-center text-2xl">📈</div>
+        <div className="w-12 h-12 rounded-2xl bg-muted/60 flex items-center justify-center"><TrendingUp className="w-6 h-6 text-muted-foreground" /></div>
         <p className="text-sm text-muted-foreground">No history yet — run classify to begin.</p>
       </motion.div>
     )

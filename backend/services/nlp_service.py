@@ -67,6 +67,8 @@ def load_model():
         tokenizer=tokenizer,
         device=device,
         top_k=None,
+        truncation=True,
+        max_length=512,
     )
     print("[NLP] Model ready.")
 
@@ -105,8 +107,7 @@ def classify_text(text: str) -> dict:
     Returns {"severity": str, "confidence": float}
     Crisis keyword check must be called before this.
     """
-    truncated = text[:512]
-    raw = _classifier(truncated)
+    raw = _classifier(text)
     scores = raw[0]  # list of {"label": ..., "score": ...}
 
     top = max(scores, key=lambda x: x["score"])

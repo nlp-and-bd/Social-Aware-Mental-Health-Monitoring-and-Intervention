@@ -1,13 +1,15 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from typing import Optional
 from backend.models.schemas import GraphDataResponse, GraphNode, GraphEdge, UserProfile, EmergencyContact, ConsentRequest
-from backend.services import mongo_service
+from backend.services import mongo_service, contact_service
 
 router = APIRouter(tags=["graph"])
 
 
 class UpdateContactsRequest(BaseModel):
     emergency_contacts: list[dict]
+    display_name: Optional[str] = None
 
 
 @router.get("/graph/data", response_model=GraphDataResponse)
@@ -23,7 +25,11 @@ async def graph_data(user_id: str):
 
 @router.post("/graph/user/{user_id}/consent")
 async def save_consent(user_id: str, req: ConsentRequest):
-    await mongo_service.set_consent(user_id, req.username, req.emergency_contacts)
+    await mongo_service.set_consent(user_id, req.username, req.display_name)
+    # Reconcile contacts separately so double-opt-in tokens + consent emails fire.
+    await contact_service.reconcile_contacts(
+        user_id, req.display_name, [c.model_dump() for c in req.emergency_contacts]
+    )
     return {"status": "ok"}
 
 
@@ -32,7 +38,10 @@ async def update_contacts(user_id: str, req: UpdateContactsRequest):
     user = await mongo_service.get_user(user_id)
     if not user:
         raise HTTPException(status_code=404, detail=f"User '{user_id}' not found")
-    await mongo_service.update_contacts(user_id, req.emergency_contacts)
+    if req.display_name is not None:
+        await mongo_service.set_display_name(user_id, req.display_name)
+    display_name = req.display_name if req.display_name is not None else user.get("display_name")
+    await contact_service.reconcile_contacts(user_id, display_name, req.emergency_contacts)
     return {"status": "ok"}
 
 
@@ -63,6 +72,7 @@ async def get_user(user_id: str):
     return UserProfile(
         user_id=user["_id"],
         username=user.get("username", user_id),
+        display_name=user.get("display_name") or None,
         severity_score=user.get("severity_score", 0.0),
         severity_label=user.get("severity_label", "Low"),
         severity_history=user.get("severity_history", []),

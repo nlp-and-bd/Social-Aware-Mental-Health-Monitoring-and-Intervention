@@ -27,7 +27,7 @@ export function SeverityBadge({ severity, score }: { severity: string; score?: n
 export function severityColor(severity: string): string {
   return {
     Low:      "#2d9e8e",
-    Medium:   "#c49a3c",
+    Medium:   "#9c7a2e",
     High:     "#c4713c",
     Critical: "#b84040",
   }[severity] ?? "#6b7280"

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { motion } from "framer-motion"
+import { ServerOff, AlertTriangle } from "lucide-react"
 
 export default function Error({ error, reset }: { error: Error; reset: () => void }) {
   useEffect(() => {
@@ -17,14 +18,16 @@ export default function Error({ error, reset }: { error: Error; reset: () => voi
         animate={{ opacity: 1, y: 0 }}
         className="text-center max-w-md space-y-5"
       >
-        <div className="text-5xl">{isBackendDown ? "🔌" : "⚠️"}</div>
+        <div className="w-16 h-16 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto">
+          {isBackendDown ? <ServerOff className="w-8 h-8 text-muted-foreground" /> : <AlertTriangle className="w-8 h-8 text-amber-500" />}
+        </div>
         <div>
           <h2 className="text-2xl text-foreground mb-2">
             {isBackendDown ? "Backend not reachable" : "Something went wrong"}
           </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
             {isBackendDown
-              ? "Make sure the FastAPI server is running on port 8000. Run uvicorn backend.main:app --reload --port 8000 in your terminal."
+              ? "Make sure the FastAPI server is running on port 8002. Run uvicorn backend.main:app --reload --reload-dir backend --port 8002 in your terminal."
               : error.message}
           </p>
         </div>

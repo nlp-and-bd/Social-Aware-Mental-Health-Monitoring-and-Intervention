@@ -1,8 +1,8 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion"
 import { toast } from "sonner"
 import { api, type UserProfile, type ClassifyResponse, type EvaluateResponse } from "@/lib/api"
 import { SeverityTimeline } from "@/components/SeverityTimeline"
@@ -11,15 +11,19 @@ import { SeverityBreakdown } from "@/components/SeverityBreakdown"
 import { ActivityHeatmap } from "@/components/ActivityHeatmap"
 import { SupportNetwork } from "@/components/SupportNetwork"
 import { CrisisPanel } from "@/components/CrisisPanel"
+import { SupportPopup } from "@/components/SupportPopup"
 import { FloatingChat } from "@/components/FloatingChat"
+import { NatureBackground } from "@/components/NatureBackground"
 import { ConsentScreen } from "@/components/ConsentScreen"
 import { SeverityBadge, severityColor } from "@/components/SeverityBadge"
 import { SettingsPanel } from "@/components/SettingsPanel"
+import { ThemeToggle } from "@/components/ThemeToggle"
+import { Bell, LogOut, Zap } from "lucide-react"
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const SEV_GRADIENT: Record<string, [string, string]> = {
   Low:      ["#2d9e8e", "#4db6a8"],
-  Medium:   ["#c49a3c", "#d4aa52"],
+  Medium:   ["#9c7a2e", "#b8923f"],
   High:     ["#c4713c", "#d4834e"],
   Critical: ["#b84040", "#c85858"],
 }
@@ -27,12 +31,10 @@ const SEV_GRADIENT: Record<string, [string, string]> = {
 const NAV = [
   { id: "overview",        label: "Overview",
     icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
-  { id: "posts",           label: "Posts",
-    icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" },
-  { id: "graph",           label: "Insights",
-    icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
   { id: "recommendations", label: "Actions",
     icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
+  { id: "posts",           label: "Posts",
+    icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" },
   { id: "settings",        label: "Settings",
     icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
 ]
@@ -62,18 +64,26 @@ function NavButton({ item, active, color, onClick }: {
 }
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
-function StatCard({ label, value, sub, accent }: {
-  label: string; value: string | number; sub?: string; accent?: string
+function StatCard({ label, value, sub, accent, index = 0, glow = false }: {
+  label: string; value: string | number; sub?: string; accent?: string; index?: number; glow?: boolean
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex-1 rounded-2xl border bg-card px-5 py-4 shadow-sm min-w-0"
+      transition={{ duration: 0.4, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
+      className="glass lift flex-1 rounded-3xl px-5 py-4 min-w-0 relative overflow-hidden"
     >
-      <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">{label}</p>
-      <p className="text-2xl font-bold truncate" style={{ color: accent ?? "var(--foreground)" }}>{value}</p>
-      {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+      {/* accent glow for the headline metric */}
+      {glow && accent && (
+        <div className="absolute -top-8 -right-6 w-28 h-28 rounded-full pointer-events-none"
+          style={{ background: `radial-gradient(circle, ${accent}33 0%, transparent 70%)` }} />
+      )}
+      <div className="relative">
+        <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1.5">{label}</p>
+        <p className="text-[1.7rem] leading-none font-bold truncate" style={{ color: accent ?? "var(--foreground)" }}>{value}</p>
+        {sub && <p className="text-xs text-muted-foreground mt-1.5">{sub}</p>}
+      </div>
     </motion.div>
   )
 }
@@ -103,23 +113,54 @@ function LoadingScreen() {
 export default function DashboardPage() {
   const { userId } = useParams<{ userId: string }>()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isAdmin = searchParams.get("admin") === "1"
+  const reduceMotion = useReducedMotion()
 
   const [user, setUser]               = useState<UserProfile | null>(null)
   const [classified, setClassified]   = useState<ClassifyResponse | null>(null)
   const [evaluation, setEvaluation]   = useState<EvaluateResponse | null>(null)
   const [loading, setLoading]         = useState(true)
-  const [classifying, setClassifying] = useState(false)
   const [showConsent, setShowConsent] = useState(false)
+  const [showSupport, setShowSupport] = useState(false)
   const [activeTab, setActiveTab]     = useState("overview")
+  const [outreach, setOutreach]       = useState<{ contact: string; nonce: number } | null>(null)
 
   const loadUser = useCallback(async () => {
+    // Admin view — strictly read-only. No ingest, no classify, no DB writes; the
+    // user's data must look exactly the same after an admin inspects the profile.
+    if (isAdmin) {
+      let profile: typeof user = null
+      try {
+        profile = await api.graphUser(userId)
+        setUser(profile)
+      } catch {
+        toast.error("Profile load failed. Try refreshing.")
+        setLoading(false)
+        return
+      }
+      setLoading(false)
+      try {
+        // classifiedPosts + evaluate are both read-only on the backend.
+        const [result, ev] = await Promise.all([
+          api.classifiedPosts(userId),
+          api.evaluate(userId),
+        ])
+        setClassified(result)
+        setEvaluation(ev)
+      } catch (e: unknown) {
+        toast.error((e as Error).message)
+      }
+      return
+    }
+
     // Step 1 — ingest (idempotent: creates user + stores posts if new, no-op if returning)
     try {
       await api.ingest(userId)
     } catch (e: unknown) {
       const msg = (e as Error).message
-      if (msg.includes("backend") || msg.includes("port 8000")) {
-        toast.error("Backend is not running. Start it with: uvicorn backend.main:app --reload --port 8002")
+      if (msg.includes("backend") || msg.includes("port 8002")) {
+        toast.error("Backend is not running. Start it with: uvicorn backend.main:app --reload --reload-dir backend --port 8002")
       } else {
         toast.error(`User "${userId}" not found in mock data. Valid IDs: u001, u002, u003, u004`)
       }
@@ -141,66 +182,66 @@ export default function DashboardPage() {
 
     setLoading(false)
 
-    // Step 3 — auto-classify in background (this is what makes posts appear immediately)
-    // Only run if there are no classifications yet (first visit)
-    if (profile.post_count > 0) {
-      try {
-        const result = await api.classify(userId)
-        setClassified(result)
-        const [u, ev] = await Promise.all([api.graphUser(userId), api.evaluate(userId)])
-        setUser(u)
-        setEvaluation(ev)
-      } catch {
-        // Silent — user can click Load & Classify manually
-      }
-    }
-  }, [userId])
-
-  const runClassify = useCallback(async () => {
-    setClassifying(true)
+    // Step 3 — always classify + evaluate on every login
+    // Classify endpoint returns existing results if already done (idempotent)
     try {
-      // Ensure user is ingested before classifying
-      await api.ingest(userId)
       const result = await api.classify(userId)
       setClassified(result)
       const [u, ev] = await Promise.all([api.graphUser(userId), api.evaluate(userId)])
-      setUser(u); setEvaluation(ev)
-    } catch (e: unknown) { toast.error((e as Error).message) }
-    finally { setClassifying(false) }
-  }, [userId])
+      setUser(u)
+      setEvaluation(ev)
+    } catch (e: unknown) {
+      toast.error((e as Error).message)
+    }
+  }, [userId, isAdmin])
 
   useEffect(() => {
+    // Don't poll (or pop) notifications in admin view — popping mutates the user's queue.
+    if (isAdmin) return
     const t = setInterval(async () => {
       const res = await api.notifications(userId).catch(() => null)
-      res?.notifications.forEach((n) => toast(n.message, { icon: "🔔" }))
+      res?.notifications.forEach((n) => toast(n.message, { icon: <Bell className="w-4 h-4" /> }))
     }, 10000)
     return () => clearInterval(t)
-  }, [userId])
+  }, [userId, isAdmin])
 
   useEffect(() => { loadUser() }, [loadUser])
 
-  async function handleConsentComplete(username: string, contacts: { name: string; contact: string }[]) {
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8002/api"}/graph/user/${userId}/consent`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: userId, username, emergency_contacts: contacts }),
-    }).catch(() => null)
-    setUser((prev) => prev ? { ...prev, username, consent_given: true, emergency_contacts: contacts } : prev)
+  // "You deserve support" popup — fires the first time a user is seen at Critical
+  // in a session. Covers both paths: already Critical at sign-in, and newly pushed
+  // to Critical by fresh posts (evaluate() resolves to the same effective_severity).
+  // Once per session so it never nags on tab switches or reloads.
+  useEffect(() => {
+    if (isAdmin || showConsent) return
+    if (evaluation?.effective_severity !== "Critical") return
+    if (typeof window === "undefined") return
+    const key = `penumbra_support_popup_${userId}`
+    if (sessionStorage.getItem(key)) return
+    sessionStorage.setItem(key, "1")
+    setShowSupport(true)
+  }, [evaluation, isAdmin, showConsent, userId])
+
+  async function handleConsentComplete(username: string, displayName: string, contacts: { name: string; contact: string; notify: boolean; details_consent: boolean }[]) {
+    const payload = contacts.map((c) => ({ ...c, email_type: "check_in" as const }))
+    await api.saveConsent(userId, username, displayName, payload).catch(() => null)
+    setUser((prev) => prev ? { ...prev, username, display_name: displayName, consent_given: true, emergency_contacts: payload } : prev)
     setShowConsent(false)
   }
 
   function logout() {
-    toast("Signed out", { icon: "👋" })
+    toast("Signed out", { icon: <LogOut className="w-4 h-4" /> })
     setTimeout(() => router.push("/"), 500)
   }
 
   if (loading) return <LoadingScreen />
-  if (showConsent) return <ConsentScreen userId={userId} onComplete={handleConsentComplete} />
+  if (showConsent && !isAdmin) return <ConsentScreen userId={userId} onComplete={handleConsentComplete} />
 
   const sevLabel   = user?.severity_label ?? "Low"
   const sevScore   = Math.round((user?.severity_score ?? 0) * 100)
   const sevCol     = severityColor(sevLabel)
   const [c1]       = SEV_GRADIENT[sevLabel] ?? ["#6b7280"]
-  const initial    = (user?.username ?? userId)[0]?.toUpperCase() ?? "U"
+  const displayName = user?.display_name?.trim() || user?.username || userId
+  const initial    = displayName[0]?.toUpperCase() ?? "U"
 
   const lastActive = user?.last_active
     ? new Date(user.last_active).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
@@ -208,16 +249,19 @@ export default function DashboardPage() {
 
   const trendLabel = evaluation?.trend === "worsening" ? "↑ Worsening"
     : evaluation?.trend === "improving" ? "↓ Improving" : "→ Stable"
-  const trendColor = evaluation?.trend === "worsening" ? "#b84040"
-    : evaluation?.trend === "improving" ? "#2d9e8e" : "var(--muted-foreground)"
+  const trendColor = evaluation?.trend === "worsening" ? "var(--trend-worse)"
+    : evaluation?.trend === "improving" ? "var(--trend-improve)" : "var(--muted-foreground)"
 
   return (
-    <motion.div className="flex h-screen bg-background overflow-hidden"
+    <motion.div className="flex h-screen overflow-hidden relative"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
 
+      {/* Painterly ambient backdrop — sits behind all content */}
+      <NatureBackground />
+
       {/* ══════════════ SIDEBAR ══════════════ */}
-      <aside className="w-52 flex-shrink-0 flex flex-col border-r bg-card z-30"
-        style={{ boxShadow: "1px 0 0 var(--border)" }}>
+      <aside className="hidden md:flex w-52 flex-shrink-0 flex-col glass-strong z-30 relative"
+        style={{ borderRight: "1px solid color-mix(in oklch, var(--border) 70%, transparent)" }}>
 
         {/* Logo */}
         <div className="px-4 py-3.5 border-b flex items-center gap-2.5">
@@ -237,7 +281,7 @@ export default function DashboardPage() {
                 style={{ background: sevCol }} />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-foreground truncate">u/{user?.username ?? userId}</p>
+              <p className="text-xs font-semibold text-foreground truncate">{displayName}</p>
               <p className="text-[10px] text-muted-foreground">{sevLabel} severity</p>
             </div>
           </div>
@@ -251,8 +295,9 @@ export default function DashboardPage() {
           ))}
         </nav>
 
-        {/* Sign out */}
-        <div className="px-3 pb-4 pt-2 border-t">
+        {/* Theme + Sign out */}
+        <div className="px-3 pb-4 pt-2 border-t space-y-0.5">
+          <ThemeToggle />
           <motion.button
             whileHover={{ x: 2 }} whileTap={{ scale: 0.97 }}
             onClick={logout}
@@ -267,10 +312,12 @@ export default function DashboardPage() {
       </aside>
 
       {/* ══════════════ MAIN CONTENT ══════════════ */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10">
 
         {/* ── Top bar ── */}
-        <header className="flex-shrink-0 border-b bg-card/80 backdrop-blur-sm px-6 py-3 flex items-center justify-between">
+        <header className="flex-shrink-0 px-4 md:px-6 py-3 flex items-center justify-between gap-4"
+          style={{ borderBottom: "1px solid color-mix(in oklch, var(--border) 60%, transparent)",
+                   background: "color-mix(in oklch, var(--card) 60%, transparent)", backdropFilter: "blur(14px)" }}>
           <div className="flex items-center gap-3">
             <div>
               <h2 className="text-sm font-semibold text-foreground leading-none" style={{ fontFamily: "var(--font-esteban), serif" }}>
@@ -283,46 +330,41 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Admin read-only badge */}
+            {isAdmin && (
+              <button
+                onClick={() => router.push("/admin")}
+                className="flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/10 border border-primary/25 rounded-full px-3 py-1.5 whitespace-nowrap flex-shrink-0 hover:bg-primary/15 transition-colors"
+                title="Viewing as admin — read-only. Posts are shown as last analysed; no re-ingest or re-classify runs."
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Admin · read-only
+              </button>
+            )}
+
             {/* Critical pill */}
             <AnimatePresence>
               {evaluation?.effective_severity === "Critical" && (
                 <motion.button key="crit"
                   initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
                   onClick={() => setActiveTab("recommendations")}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-full px-3 py-1.5"
+                  whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-rose-700 bg-rose-50/90 border border-rose-200 rounded-full px-3.5 py-1.5 whitespace-nowrap flex-shrink-0 shadow-sm"
                 >
-                  <motion.span animate={{ scale: [1, 1.4, 1] }} transition={{ repeat: Infinity, duration: 1.4 }}>●</motion.span>
+                  <motion.span
+                    animate={reduceMotion ? {} : { scale: [1, 1.4, 1] }}
+                    transition={reduceMotion ? {} : { repeat: 5, duration: 1.4 }}
+                  >●</motion.span>
                   Critical — view actions
                 </motion.button>
               )}
             </AnimatePresence>
 
-            {/* Classify button */}
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-              onClick={runClassify} disabled={classifying}
-              className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold text-white disabled:opacity-50 shadow-sm"
-              style={{ background: "linear-gradient(135deg, #6d28d9, #8b5cf6)" }}
-            >
-              {classifying ? (
-                <><motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>◌</motion.span>Analysing…</>
-              ) : (
-                <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>Load & Classify</>
-              )}
-            </motion.button>
           </div>
         </header>
-
-        {/* ── Stat cards row ── */}
-        <div className="flex-shrink-0 px-6 pt-5 pb-4 flex gap-4">
-          <StatCard label="Distress score" value={`${sevScore}%`} sub={sevLabel} accent={sevCol} />
-          <StatCard label="Posts analysed" value={user?.post_count ?? 0} sub="from Reddit" />
-          <StatCard label="Trend" value={evaluation ? trendLabel : "—"}
-            sub={evaluation ? "based on history" : "run classify first"} accent={evaluation ? trendColor : undefined} />
-          <StatCard label="Last active" value={lastActive}
-            sub={user?.emergency_contacts.length ? `${user.emergency_contacts.length} contact${user.emergency_contacts.length > 1 ? "s" : ""} set` : "no contacts set"} />
-        </div>
 
         {/* ── Tab content ── */}
         <div className="flex-1 overflow-y-auto">
@@ -333,45 +375,54 @@ export default function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.18 }}
-              className="px-6 pb-6 space-y-5"
+              className="px-4 md:px-6 pt-5 pb-44 space-y-5"
             >
 
-              {/* Overview */}
+              {/* Overview — analytics home */}
               {activeTab === "overview" && (
                 <div className="space-y-5">
+                  {/* Stat cards — scroll with Overview, not pinned across tabs */}
+                  <div className="grid grid-cols-2 md:flex gap-3 md:gap-4">
+                    <StatCard index={0} glow label="Distress score" value={`${sevScore}%`} sub={sevLabel} accent={sevCol} />
+                    <StatCard index={1} label="Posts analysed" value={user?.post_count ?? 0} sub="total" />
+                    <StatCard index={2} label="Last active" value={lastActive}
+                      sub={user?.emergency_contacts.length ? `${user.emergency_contacts.length} contact${user.emergency_contacts.length > 1 ? "s" : ""} set` : "no contacts set"} />
+                  </div>
+
                   <AnimatePresence>
                     {evaluation?.effective_severity === "Critical" && (
                       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                        <CrisisPanel />
+                        <CrisisPanel userId={userId} contacts={user?.emergency_contacts ?? []} />
                       </motion.div>
                     )}
                   </AnimatePresence>
-                  <div className="rounded-2xl border bg-card p-5 shadow-sm">
+
+                  {/* Two-up — distribution + activity */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="glass rounded-3xl p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-sm font-semibold text-foreground">Severity breakdown</p>
+                        <span className="text-xs text-muted-foreground">{classified?.results.length ?? 0} posts</span>
+                      </div>
+                      <SeverityBreakdown results={classified?.results ?? []} />
+                    </div>
+                    <div className="glass rounded-3xl p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-sm font-semibold text-foreground">Post activity</p>
+                        <span className="text-xs text-muted-foreground">Last 12 weeks</span>
+                      </div>
+                      <ActivityHeatmap results={classified?.results ?? []} />
+                    </div>
+                  </div>
+
+                  {/* Severity over time — bottom */}
+                  <div className="glass rounded-3xl p-5">
                     <div className="flex items-center justify-between mb-4">
                       <p className="text-sm font-semibold text-foreground">Severity over time</p>
                       <span className="text-xs text-muted-foreground">{user?.severity_history.length ?? 0} data points</span>
                     </div>
                     <SeverityTimeline history={user?.severity_history ?? []} />
                   </div>
-                  {/* Emergency contacts inline */}
-                  {(user?.emergency_contacts.length ?? 0) > 0 && (
-                    <div className="rounded-2xl border bg-card p-4 shadow-sm">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Emergency contacts</p>
-                      <div className="flex flex-wrap gap-3">
-                        {user!.emergency_contacts.map((c, i) => (
-                          <div key={i} className="flex items-center gap-2 bg-muted/40 rounded-xl px-3 py-2">
-                            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                              {c.name[0].toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="text-xs font-medium text-foreground">{c.name}</p>
-                              <p className="text-[10px] text-muted-foreground">{c.contact}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -382,43 +433,12 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Insights (graph tab) */}
-              {activeTab === "graph" && (
-                <div className="space-y-5">
-                  <div className="grid grid-cols-2 gap-5">
-                    <div className="rounded-2xl border bg-card p-5 shadow-sm">
-                      <div className="flex items-center justify-between mb-4">
-                        <p className="text-sm font-semibold text-foreground">Severity breakdown</p>
-                        <span className="text-xs text-muted-foreground">{classified?.results.length ?? 0} posts</span>
-                      </div>
-                      <SeverityBreakdown results={classified?.results ?? []} />
-                    </div>
-                    <div className="rounded-2xl border bg-card p-5 shadow-sm">
-                      <div className="flex items-center justify-between mb-4">
-                        <p className="text-sm font-semibold text-foreground">Post activity</p>
-                        <span className="text-xs text-muted-foreground">Last 12 weeks</span>
-                      </div>
-                      <ActivityHeatmap results={classified?.results ?? []} />
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border bg-card p-5 shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                      <p className="text-sm font-semibold text-foreground">Support network</p>
-                      <span className="text-xs text-muted-foreground">
-                        {user?.emergency_contacts.length ?? 0} contact{(user?.emergency_contacts.length ?? 0) !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                    {user && <SupportNetwork user={user} />}
-                  </div>
-                </div>
-              )}
-
               {/* Settings */}
               {activeTab === "settings" && user && (
                 <SettingsPanel
                   user={user}
-                  onContactsUpdated={(contacts) =>
-                    setUser((prev) => prev ? { ...prev, emergency_contacts: contacts } : prev)
+                  onContactsUpdated={(contacts, displayName) =>
+                    setUser((prev) => prev ? { ...prev, emergency_contacts: contacts, display_name: displayName || prev.display_name } : prev)
                   }
                   onPostsCleared={() => {
                     setClassified(null)
@@ -433,24 +453,30 @@ export default function DashboardPage() {
 
               {/* Actions */}
               {activeTab === "recommendations" && (
-                <div className="max-w-2xl mx-auto w-full space-y-4">
-                  <AnimatePresence>
-                    {evaluation?.effective_severity === "Critical" && (
-                      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                        <CrisisPanel />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  {evaluation ? (
-                    <>
-                      <div className="flex items-center gap-3 rounded-2xl border bg-card px-4 py-3 shadow-sm">
-                        <p className="text-sm text-muted-foreground flex-1">Response based on severity</p>
-                        <SeverityBadge severity={evaluation.effective_severity} />
-                        {evaluation.effective_severity !== evaluation.severity && (
-                          <span className="text-xs text-rose-600 font-medium">escalated from {evaluation.severity}</span>
-                        )}
+                <div className="flex flex-col md:flex-row gap-5 items-start">
+                  {/* Left column */}
+                  <div className="flex-1 min-w-0 space-y-4">
+                    {/* Support network + contact alert */}
+                    <div className="glass rounded-3xl p-5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-foreground">Support network</p>
+                        <span className="text-xs text-muted-foreground">
+                          {user?.emergency_contacts.length ?? 0} contact{(user?.emergency_contacts.length ?? 0) !== 1 ? "s" : ""}
+                        </span>
                       </div>
-                      <div className="rounded-2xl border bg-card p-5 shadow-sm space-y-2.5">
+                      {user && (
+                        <SupportNetwork
+                          user={user}
+                          height={260}
+                          onContactClick={(c) => setOutreach({ contact: c.contact, nonce: Date.now() })}
+                        />
+                      )}
+                      <CrisisPanel userId={userId} contacts={user?.emergency_contacts ?? []} compact openRequest={outreach} />
+                    </div>
+
+                    {/* Recommended steps */}
+                    {evaluation ? (
+                      <div className="glass rounded-3xl p-5 space-y-2.5">
                         <p className="text-sm font-semibold text-foreground mb-3">Recommended steps</p>
                         {evaluation.recommendations.map((r, i) => (
                           <motion.div key={i}
@@ -463,27 +489,39 @@ export default function DashboardPage() {
                           </motion.div>
                         ))}
                       </div>
-                      {evaluation.helplines.length > 0 && (
-                        <div className="rounded-2xl border bg-card p-5 shadow-sm space-y-2.5">
-                          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Helplines</p>
-                          {evaluation.helplines.map((h) => (
-                            <div key={h.name} className="flex items-center justify-between rounded-xl border px-4 py-3 bg-muted/20 hover:bg-muted/40 transition-colors">
-                              <div>
-                                <p className="text-sm font-medium text-foreground">{h.name}</p>
-                                {h.url && <p className="text-xs text-muted-foreground">{h.url}</p>}
-                              </div>
-                              <a href={`tel:${h.number.replace(/-/g, "")}`} className="text-sm font-semibold text-primary hover:underline">{h.number}</a>
+                    ) : (
+                      <div className="glass rounded-3xl p-12 flex flex-col items-center gap-3">
+                        <div className="w-14 h-14 rounded-2xl bg-muted/60 flex items-center justify-center"><Zap className="w-7 h-7 text-muted-foreground" /></div>
+                        <p className="text-sm text-muted-foreground text-center">
+                          Analysing your posts — recommendations will appear shortly.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right column — helplines (broader, sticky) */}
+                  {(evaluation?.helplines.length ?? 0) > 0 && (
+                    <div className="w-full md:w-80 flex-shrink-0">
+                      <div className="glass rounded-3xl p-5 space-y-2.5 md:sticky md:top-4">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Support lines</p>
+                        {evaluation!.helplines.map((h) => (
+                          <div key={h.name} className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3 bg-muted/20 hover:bg-muted/40 transition-colors">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-foreground leading-snug truncate">{h.name}</p>
+                              {h.url && <p className="text-[10px] text-muted-foreground truncate">{h.url}</p>}
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="rounded-2xl border bg-card p-12 shadow-sm flex flex-col items-center gap-3">
-                      <div className="w-14 h-14 rounded-2xl bg-muted/60 flex items-center justify-center text-2xl">⚡</div>
-                      <p className="text-sm text-muted-foreground text-center">
-                        Click <strong>Load & Classify</strong> to see your personalised recommendations.
-                      </p>
+                            {h.number && (
+                              <a href={`tel:${h.number.replace(/-/g, "")}`}
+                                className="text-sm font-semibold text-primary hover:underline flex-shrink-0">
+                                {h.number}
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                        <p className="text-[10px] text-muted-foreground/50 text-center pt-1">
+                          Immediate danger? Call <strong>112</strong>
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -494,11 +532,48 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Floating chat widget */}
-      <FloatingChat
-        userId={userId}
-        onEvaluate={() => api.evaluate(userId).then(setEvaluation).catch(() => null)}
-      />
+      {/* Mobile bottom nav — replaces the sidebar under md */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 glass-strong border-t flex justify-around px-1 py-1.5"
+        style={{ paddingBottom: "max(0.375rem, env(safe-area-inset-bottom))" }}>
+        {NAV.map((item) => {
+          const active = activeTab === item.id
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              aria-current={active ? "page" : undefined}
+              aria-label={item.label}
+              className="flex flex-col items-center justify-center gap-0.5 px-2 py-2 min-h-[44px] flex-1 rounded-lg text-[10px] font-medium min-w-0"
+              style={{ color: active ? c1 : "var(--muted-foreground)" }}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.7} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+              </svg>
+              {item.label}
+            </button>
+          )
+        })}
+      </nav>
+
+      {/* Floating chat widget — hidden in admin view so it can't write to the user's chat history */}
+      {!isAdmin && (
+        <FloatingChat
+          userId={userId}
+          onEvaluate={() => api.evaluate(userId).then(setEvaluation).catch(() => null)}
+        />
+      )}
+
+      {/* "You deserve support" popup — once per session when Critical (never in admin view) */}
+      {!isAdmin && (
+        <SupportPopup
+          open={showSupport}
+          displayName={user?.display_name?.trim() || undefined}
+          helplines={evaluation?.helplines}
+          hasContacts={(user?.emergency_contacts.filter((c) => c.notify !== false && c.contact).length ?? 0) > 0}
+          onReachOut={() => { setShowSupport(false); setActiveTab("recommendations") }}
+          onClose={() => setShowSupport(false)}
+        />
+      )}
     </motion.div>
   )
 }

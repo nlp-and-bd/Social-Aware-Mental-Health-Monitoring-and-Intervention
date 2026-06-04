@@ -2,12 +2,13 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
+import { Calendar } from "lucide-react"
 import type { PostSeverityResult } from "@/lib/api"
 
 const SEV_ORDER = ["Low", "Medium", "High", "Critical"]
 const SEV_COLOR: Record<string, string> = {
   Low:      "#2d9e8e",
-  Medium:   "#c49a3c",
+  Medium:   "#9c7a2e",
   High:     "#c4713c",
   Critical: "#b84040",
 }
@@ -27,7 +28,7 @@ export function ActivityHeatmap({ results }: { results: PostSeverityResult[] }) 
   if (results.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-48 gap-3">
-        <div className="w-12 h-12 rounded-2xl bg-muted/60 flex items-center justify-center text-2xl">📅</div>
+        <div className="w-12 h-12 rounded-2xl bg-muted/60 flex items-center justify-center"><Calendar className="w-6 h-6 text-muted-foreground" /></div>
         <p className="text-sm text-muted-foreground">No posts classified yet.</p>
       </div>
     )
@@ -76,7 +77,7 @@ export function ActivityHeatmap({ results }: { results: PostSeverityResult[] }) 
         {/* Day labels */}
         <div className="flex flex-col gap-1 pt-5 pr-1">
           {DAYS.map((d, i) => (
-            <div key={i} className="h-4 flex items-center text-[9px] text-muted-foreground/60 w-6 leading-none">{d}</div>
+            <div key={i} className="h-4 flex items-center text-[10px] text-muted-foreground w-6 leading-none">{d}</div>
           ))}
         </div>
 
@@ -87,7 +88,7 @@ export function ActivityHeatmap({ results }: { results: PostSeverityResult[] }) 
             {weeks.map((week, wi) => {
               const firstOfMonth = week.find(d => d.date.slice(8) === "01")
               return (
-                <div key={wi} className="w-4 text-[9px] text-muted-foreground/60">
+                <div key={wi} className="w-4 text-[10px] text-muted-foreground">
                   {firstOfMonth ? new Date(firstOfMonth.date).toLocaleString("default", { month: "short" }) : ""}
                 </div>
               )
@@ -102,17 +103,25 @@ export function ActivityHeatmap({ results }: { results: PostSeverityResult[] }) 
                   const isEmpty = day.count === 0 || isFuture
                   const color = isEmpty ? "var(--muted)" : SEV_COLOR[day.severity]
                   const opacity = isEmpty ? 1 : Math.min(0.4 + day.count * 0.3, 1)
+                  const label = isEmpty ? undefined
+                    : `${day.count} post${day.count !== 1 ? "s" : ""}, ${day.severity} severity, ${new Date(day.date).toLocaleDateString("en-IN", { day: "numeric", month: "long" })}`
 
                   return (
-                    <motion.div
+                    <motion.button
                       key={di}
-                      className="w-4 h-4 rounded-sm cursor-default"
+                      type="button"
+                      disabled={isEmpty}
+                      aria-label={label}
+                      className={`w-4 h-4 rounded-sm ${isEmpty ? "cursor-default" : "cursor-pointer"}`}
                       style={{ background: color, opacity: isFuture ? 0.2 : opacity }}
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ delay: (wi * 7 + di) * 0.003, duration: 0.15 }}
                       onMouseEnter={() => !isEmpty && setHovered(day)}
                       onMouseLeave={() => setHovered(null)}
+                      onFocus={() => !isEmpty && setHovered(day)}
+                      onBlur={() => setHovered(null)}
+                      onClick={() => !isEmpty && setHovered((h) => (h?.date === day.date ? null : day))}
                       whileHover={!isEmpty ? { scale: 1.4 } : {}}
                     />
                   )
@@ -143,15 +152,17 @@ export function ActivityHeatmap({ results }: { results: PostSeverityResult[] }) 
         </motion.div>
       )}
 
-      {/* Legend */}
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] text-muted-foreground">Hover a cell to see posts</span>
-        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-          <span>Less</span>
+      {/* Legend — each colour is paired with its label so severity is never
+          conveyed by colour alone (colourblind users + touch with no hover). */}
+      <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-2">
+        <span className="text-[10px] text-muted-foreground">Tap or hover a cell to see posts</span>
+        <div className="flex items-center gap-3 flex-wrap">
           {["Low", "Medium", "High", "Critical"].map((s) => (
-            <div key={s} className="w-3.5 h-3.5 rounded-sm" style={{ background: SEV_COLOR[s] }} title={s} />
+            <span key={s} className="inline-flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+              <span className="w-3 h-3 rounded-sm" style={{ background: SEV_COLOR[s] }} />
+              {s}
+            </span>
           ))}
-          <span>More severe</span>
         </div>
       </div>
     </div>
