@@ -257,7 +257,9 @@ export function SettingsPanel({ user, onContactsUpdated, onPostsCleared, onAccou
                   </button>
                 </div>
 
-                {/* Details consent toggle (only when notify=true) */}
+                {/* Details-sharing permission — an explicit request the CONTACT must
+                    approve. Never a toggle: the user can only ask; the badge reflects
+                    the contact's own confirmation. (Only shown when notify=true.) */}
                 <AnimatePresence>
                   {c.notify && (
                     <motion.div
@@ -266,31 +268,53 @@ export function SettingsPanel({ user, onContactsUpdated, onPostsCleared, onAccou
                       exit={{ opacity: 0, height: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="flex items-center justify-between px-1 pt-1">
-                        <div className="pr-3">
-                          <div className="flex items-center gap-2">
-                            <p className="text-xs font-medium text-foreground">Ask permission to share details</p>
-                            {c.consent_status === "granted" && (
-                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">Confirmed</span>
-                            )}
-                            {c.consent_status === "pending" && (
-                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">Awaiting confirmation</span>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">
-                            {c.consent_status === "granted"
-                              ? "They've confirmed — you can share how you're doing or a personal note with them."
-                              : c.consent_status === "pending"
-                              ? "We've emailed them a confirmation link. Details unlock once they agree."
-                              : "We'll email them a confirmation link. Only after they agree can you share details."}
-                          </p>
+                      <div className="rounded-lg bg-muted/30 border border-border/50 px-3 py-2.5 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-medium text-foreground">Sharing personal details</p>
+                          {c.consent_status === "granted" ? (
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">Confirmed</span>
+                          ) : c.consent_status === "pending" ? (
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">Awaiting confirmation</span>
+                          ) : c.details_consent ? (
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">Request queued</span>
+                          ) : (
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">Check-in only</span>
+                          )}
                         </div>
-                        <button
-                          onClick={() => updateField(i, "details_consent", !c.details_consent)}
-                          className={`relative w-10 h-[22px] rounded-full transition-colors flex-shrink-0 ${c.details_consent ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
-                        >
-                          <div className={`absolute top-[3px] left-[3px] w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${c.details_consent ? "translate-x-[18px]" : "translate-x-0"}`} />
-                        </button>
+
+                        {c.consent_status === "granted" ? (
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              {c.name.trim() || "They"}{" "} approved. When you reach out you can include how you&apos;re doing or a personal note.
+                            </p>
+                            <button onClick={() => updateField(i, "details_consent", false)}
+                              className="text-[11px] font-medium text-rose-600 hover:underline flex-shrink-0">Revoke</button>
+                          </div>
+                        ) : c.consent_status === "pending" ? (
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              We&apos;ve emailed {c.name.trim() || "them"} a confirmation link. Until they approve, they only receive a generic check-in.
+                            </p>
+                            <button onClick={() => updateField(i, "details_consent", false)}
+                              className="text-[11px] font-medium text-rose-600 hover:underline flex-shrink-0">Cancel</button>
+                          </div>
+                        ) : c.details_consent ? (
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              We&apos;ll email {c.name.trim() || "them"} a confirmation link when you save. Details stay locked until they approve.
+                            </p>
+                            <button onClick={() => updateField(i, "details_consent", false)}
+                              className="text-[11px] font-medium text-muted-foreground hover:underline flex-shrink-0">Undo</button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              By default they only get a generic check-in. Ask permission to be able to share how you&apos;re doing.
+                            </p>
+                            <button onClick={() => updateField(i, "details_consent", true)}
+                              className="text-[11px] font-semibold text-primary hover:underline flex-shrink-0 whitespace-nowrap">Request permission</button>
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   )}

@@ -18,7 +18,7 @@ import { ConsentScreen } from "@/components/ConsentScreen"
 import { SeverityBadge, severityColor } from "@/components/SeverityBadge"
 import { SettingsPanel } from "@/components/SettingsPanel"
 import { ThemeToggle } from "@/components/ThemeToggle"
-import { Bell, LogOut, Zap } from "lucide-react"
+import { Bell, LogOut, Zap, HeartHandshake } from "lucide-react"
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const SEV_GRADIENT: Record<string, [string, string]> = {
@@ -452,51 +452,86 @@ export default function DashboardPage() {
               )}
 
               {/* Actions */}
-              {activeTab === "recommendations" && (
-                <div className="flex flex-col md:flex-row gap-5 items-start">
-                  {/* Left column */}
-                  <div className="flex-1 min-w-0 space-y-4">
-                    {/* Support network + contact alert */}
-                    <div className="glass rounded-3xl p-5 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-semibold text-foreground">Support network</p>
-                        <span className="text-xs text-muted-foreground">
-                          {user?.emergency_contacts.length ?? 0} contact{(user?.emergency_contacts.length ?? 0) !== 1 ? "s" : ""}
-                        </span>
-                      </div>
-                      {user && (
+              {activeTab === "recommendations" && (() => {
+                const contactCount = user?.emergency_contacts.length ?? 0
+                const hasContacts = contactCount > 0
+                const isCritical = evaluation?.effective_severity === "Critical"
+                // In a crisis with contacts already set, reaching out leads. Otherwise
+                // (calmer tiers, or no contacts yet) the recommended steps lead and the
+                // support network sits at the bottom.
+                const supportFirst = isCritical && hasContacts
+
+                const recommendedBlock = evaluation ? (
+                  <div className="glass rounded-3xl p-5 space-y-2.5">
+                    <p className="text-sm font-semibold text-foreground mb-3">Recommended steps</p>
+                    {evaluation.recommendations.map((r, i) => (
+                      <motion.div key={i}
+                        initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
+                        className="flex gap-3 items-start p-3.5 rounded-xl bg-muted/30 border border-border/40 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-primary"
+                          style={{ background: `${c1}15`, border: `1px solid ${c1}30` }}>{i + 1}</div>
+                        <span className="text-sm text-foreground leading-relaxed">{r}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="glass rounded-3xl p-12 flex flex-col items-center gap-3">
+                    <div className="w-14 h-14 rounded-2xl bg-muted/60 flex items-center justify-center"><Zap className="w-7 h-7 text-muted-foreground" /></div>
+                    <p className="text-sm text-muted-foreground text-center">
+                      Analysing your posts — recommendations will appear shortly.
+                    </p>
+                  </div>
+                )
+
+                const supportBlock = (
+                  <div className="glass rounded-3xl p-5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-foreground">Support network</p>
+                      <span className="text-xs text-muted-foreground">
+                        {contactCount} contact{contactCount !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    {hasContacts && user ? (
+                      <>
                         <SupportNetwork
                           user={user}
                           height={260}
                           onContactClick={(c) => setOutreach({ contact: c.contact, nonce: Date.now() })}
                         />
-                      )}
-                      <CrisisPanel userId={userId} contacts={user?.emergency_contacts ?? []} compact openRequest={outreach} />
-                    </div>
-
-                    {/* Recommended steps */}
-                    {evaluation ? (
-                      <div className="glass rounded-3xl p-5 space-y-2.5">
-                        <p className="text-sm font-semibold text-foreground mb-3">Recommended steps</p>
-                        {evaluation.recommendations.map((r, i) => (
-                          <motion.div key={i}
-                            initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
-                            className="flex gap-3 items-start p-3.5 rounded-xl bg-muted/30 border border-border/40 hover:bg-muted/50 transition-colors"
-                          >
-                            <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-primary"
-                              style={{ background: `${c1}15`, border: `1px solid ${c1}30` }}>{i + 1}</div>
-                            <span className="text-sm text-foreground leading-relaxed">{r}</span>
-                          </motion.div>
-                        ))}
-                      </div>
+                        <CrisisPanel userId={userId} contacts={user?.emergency_contacts ?? []} compact openRequest={outreach} />
+                      </>
                     ) : (
-                      <div className="glass rounded-3xl p-12 flex flex-col items-center gap-3">
-                        <div className="w-14 h-14 rounded-2xl bg-muted/60 flex items-center justify-center"><Zap className="w-7 h-7 text-muted-foreground" /></div>
-                        <p className="text-sm text-muted-foreground text-center">
-                          Analysing your posts — recommendations will appear shortly.
-                        </p>
+                      <div className="flex flex-col items-center text-center gap-3 py-6">
+                        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                          <HeartHandshake className="w-6 h-6 text-primary" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-foreground">Build your support network</p>
+                          <p className="text-xs text-muted-foreground max-w-xs">
+                            Add up to 3 people you trust. If things ever reach a crisis, you can reach out to them in one tap — and you stay in control of what they see.
+                          </p>
+                        </div>
+                        <motion.button
+                          whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                          onClick={() => setActiveTab("settings")}
+                          className="rounded-xl px-4 py-2 text-xs font-semibold text-white"
+                          style={{ background: "linear-gradient(135deg, #6d28d9, #8b5cf6)" }}
+                        >
+                          + Add emergency contacts
+                        </motion.button>
                       </div>
                     )}
+                  </div>
+                )
+
+                return (
+                <div className="flex flex-col md:flex-row gap-5 items-start">
+                  {/* Left column — order depends on severity & whether contacts exist */}
+                  <div className="flex-1 min-w-0 space-y-4">
+                    {supportFirst
+                      ? (<>{supportBlock}{recommendedBlock}</>)
+                      : (<>{recommendedBlock}{supportBlock}</>)}
                   </div>
 
                   {/* Right column — helplines (broader, sticky) */}
@@ -525,7 +560,8 @@ export default function DashboardPage() {
                     </div>
                   )}
                 </div>
-              )}
+                )
+              })()}
 
             </motion.div>
           </AnimatePresence>

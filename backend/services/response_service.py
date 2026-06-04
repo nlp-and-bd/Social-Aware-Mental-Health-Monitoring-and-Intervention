@@ -25,31 +25,29 @@ def get_trend(severity_history: list[dict]) -> str:
 #   AASRA (Mumbai, 24/7)                         9820466726
 #   NIMHANS psychosocial support                 080-46110007
 #   National emergency number                    112
+# Every tier sees the SAME full set of lines — support is never withheld. Only the
+# ORDER changes, surfacing the most relevant lines first for the given severity.
+_HELPLINE = {
+    "telemanas": {"name": "Tele-MANAS (Govt. of India, 24/7)", "number": "14416", "url": "telemanas.mohfw.gov.in"},
+    "icall":     {"name": "iCall (TISS) — free counselling", "number": "9152987821", "url": "icallhelpline.org"},
+    "vandrevala":{"name": "Vandrevala Foundation (24/7)", "number": "9999666555", "url": "vandrevalafoundation.com"},
+    "kiran":     {"name": "KIRAN (MoSJE, 24/7)", "number": "1800-599-0019", "url": None},
+    "nimhans":   {"name": "NIMHANS psychosocial support", "number": "080-46110007", "url": None},
+    "aasra":     {"name": "AASRA (24/7 crisis line)", "number": "9820466726", "url": "aasra.info"},
+    "emergency": {"name": "Emergency services (immediate danger)", "number": "112", "url": None},
+}
+
+# Severity-appropriate ordering of the full list. Gentler / counselling-first for
+# lower tiers; crisis and emergency lines rise to the top as severity increases.
+_HELPLINE_ORDER: dict[str, list[str]] = {
+    "Low":      ["telemanas", "icall", "vandrevala", "kiran", "nimhans", "aasra", "emergency"],
+    "Medium":   ["telemanas", "icall", "vandrevala", "kiran", "nimhans", "aasra", "emergency"],
+    "High":     ["telemanas", "icall", "vandrevala", "nimhans", "aasra", "kiran", "emergency"],
+    "Critical": ["aasra", "telemanas", "emergency", "vandrevala", "icall", "kiran", "nimhans"],
+}
+
 HELPLINES: dict[str, list[dict]] = {
-    # Even when someone is doing well, one always-available, no-pressure option.
-    "Low": [
-        {"name": "Tele-MANAS (Govt. of India, 24/7)", "number": "14416", "url": "telemanas.mohfw.gov.in"},
-    ],
-    "Medium": [
-        {"name": "Tele-MANAS (Govt. of India, 24/7)", "number": "14416", "url": "telemanas.mohfw.gov.in"},
-        {"name": "iCall (TISS) — free counselling", "number": "9152987821", "url": "icallhelpline.org"},
-        {"name": "Vandrevala Foundation (24/7)", "number": "9999666555", "url": "vandrevalafoundation.com"},
-    ],
-    "High": [
-        {"name": "Tele-MANAS (Govt. of India, 24/7)", "number": "14416", "url": "telemanas.mohfw.gov.in"},
-        {"name": "iCall (TISS) — free counselling", "number": "9152987821", "url": "icallhelpline.org"},
-        {"name": "Vandrevala Foundation (24/7)", "number": "9999666555", "url": "vandrevalafoundation.com"},
-        {"name": "KIRAN (MoSJE, 24/7)", "number": "1800-599-0019", "url": None},
-        {"name": "NIMHANS psychosocial support", "number": "080-46110007", "url": None},
-    ],
-    "Critical": [
-        {"name": "Tele-MANAS (Govt. of India, 24/7)", "number": "14416", "url": "telemanas.mohfw.gov.in"},
-        {"name": "AASRA (24/7 crisis line)", "number": "9820466726", "url": "aasra.info"},
-        {"name": "iCall (TISS)", "number": "9152987821", "url": "icallhelpline.org"},
-        {"name": "Vandrevala Foundation (24/7)", "number": "9999666555", "url": "vandrevalafoundation.com"},
-        {"name": "KIRAN (MoSJE, 24/7)", "number": "1800-599-0019", "url": None},
-        {"name": "Emergency services (immediate danger)", "number": "112", "url": None},
-    ],
+    sev: [_HELPLINE[k] for k in order] for sev, order in _HELPLINE_ORDER.items()
 }
 
 RECOMMENDATIONS: dict[str, list[str]] = {
