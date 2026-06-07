@@ -248,6 +248,8 @@ export const api = {
       body: JSON.stringify({ username }),
     }),
 
+  redditLoginUrl: () => `${BASE}/auth/reddit`,
+
   adminLogin: (password: string) =>
     req<{ token: string }>("/admin/token", {
       method: "POST",

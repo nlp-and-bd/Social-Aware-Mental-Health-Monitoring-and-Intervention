@@ -13,6 +13,7 @@ interface Contact {
 
 interface Props {
   userId: string
+  initialUsername?: string
   onComplete: (username: string, displayName: string, contacts: Contact[]) => void
 }
 
@@ -20,8 +21,9 @@ function defaultContact(): Contact {
   return { name: "", contact: "", notify: true, details_consent: false }
 }
 
-export function ConsentScreen({ userId, onComplete }: Props) {
-  const [username, setUsername] = useState(userId)
+export function ConsentScreen({ userId, initialUsername, onComplete }: Props) {
+  // Prefill the real handle, not the internal id (else consent overwrites the stored username).
+  const [username, setUsername] = useState(initialUsername || userId)
   const [displayName, setDisplayName] = useState("")
   const [contacts, setContacts] = useState<Contact[]>([defaultContact()])
   const [agreed, setAgreed] = useState(false)

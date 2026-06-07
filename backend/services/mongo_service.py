@@ -36,7 +36,8 @@ async def find_user_by_username(username: str) -> dict | None:
     return await _db["users"].find_one({"username": username})
 
 
-async def upsert_user(user_id: str, username: str, emergency_contacts: list, connections: list):
+async def upsert_user(user_id: str, username: str, emergency_contacts: list, connections: list,
+                      source: str = "mock"):
     now = datetime.now(timezone.utc).isoformat()
     await _db["users"].update_one(
         {"_id": user_id},
@@ -53,6 +54,7 @@ async def upsert_user(user_id: str, username: str, emergency_contacts: list, con
             "chat_history": [],
             "notifications": [],
             "consent_given": False,
+            "source": source,
             "last_active": now,
             "created_at": now,
         }},
@@ -68,6 +70,10 @@ async def set_consent(user_id: str, username: str, display_name: str | None = No
     if display_name is not None:
         update["display_name"] = display_name
     await _db["users"].update_one({"_id": user_id}, {"$set": update})
+
+
+async def set_user_source(user_id: str, source: str):
+    await _db["users"].update_one({"_id": user_id}, {"$set": {"source": source}})
 
 
 async def set_display_name(user_id: str, display_name: str):
@@ -235,19 +241,26 @@ async def delete_user(user_id: str):
 
 # --- Posts ---
 
-async def upsert_post(post_id: str, user_id: str, date: str, subreddit: str, text: str):
+async def upsert_post(post_id: str, user_id: str, date: str, subreddit: str, text: str,
+                      created_utc: float | None = None, embedding: list[float] | None = None):
+    doc = {
+        "_id": post_id,
+        "user_id": user_id,
+        "date": date,
+        "subreddit": subreddit,
+        "text": text,
+        "severity": None,
+        "confidence": None,
+        "classified_at": None,
+    }
+    # Only present for real Reddit posts; mock/demo posts omit them (back-compatible).
+    if created_utc is not None:
+        doc["created_utc"] = created_utc
+    if embedding is not None:
+        doc["embedding"] = embedding
     await _db["posts"].update_one(
         {"_id": post_id},
-        {"$setOnInsert": {
-            "_id": post_id,
-            "user_id": user_id,
-            "date": date,
-            "subreddit": subreddit,
-            "text": text,
-            "severity": None,
-            "confidence": None,
-            "classified_at": None,
-        }},
+        {"$setOnInsert": doc},
         upsert=True,
     )
     await _db["users"].update_one(
@@ -263,6 +276,25 @@ async def get_unclassified_posts(user_id: str) -> list[dict]:
 
 async def get_all_posts(user_id: str) -> list[dict]:
     cursor = _db["posts"].find({"user_id": user_id})
+    return await cursor.to_list(length=None)
+
+
+async def get_recent_posts(user_id: str, days: int = 90) -> list[dict]:
+    """Posts from the last `days` (by created_utc, falling back to ISO date) for personal RAG."""
+    from datetime import timedelta
+    cutoff_dt = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff_epoch = cutoff_dt.timestamp()
+    cutoff_date = cutoff_dt.strftime("%Y-%m-%d")
+    query = {
+        "user_id": user_id,
+        "$or": [
+            {"created_utc": {"$gte": cutoff_epoch}},
+            {"created_utc": {"$exists": False}, "date": {"$gte": cutoff_date}},
+        ],
+    }
+    projection = {"text": 1, "embedding": 1, "created_utc": 1, "date": 1,
+                  "subreddit": 1, "severity": 1}
+    cursor = _db["posts"].find(query, projection)
     return await cursor.to_list(length=None)
 
 

@@ -1,0 +1,102 @@
+{
+  "generated_at": "2026-06-07T14:06:41.317749+00:00",
+  "config": {
+    "reps": 2,
+    "seconds_per_stage": 3.0,
+    "posts_per_user": 50,
+    "llm_wh_per_query_estimate": 0.3
+  },
+  "environment": {
+    "cpu_model": "12th Gen Intel(R) Core(TM) i5-12450H",
+    "cpu_count": 12,
+    "cpu_power_w_detected": 7.69,
+    "ram_total_gb": 15.71,
+    "gpu_model": "1 x NVIDIA GeForce RTX 2050",
+    "os": "Windows-11-10.0.26200-SP0",
+    "python_version": "3.12.0",
+    "codecarbon_version": "3.2.7",
+    "country_name": "India",
+    "country_iso_code": "IND",
+    "grid_carbon_intensity_kg_per_kwh": 0.71344
+  },
+  "raw_runs": [
+    {
+      "stage": "model_load_mentalbert",
+      "rep": 1,
+      "iters": 1,
+      "wall_s": 2.1791,
+      "per_item_ms": 2179.13,
+      "per_item_mwh": 18.2593,
+      "stage_energy_wh": 0.018259,
+      "stage_co2_g": 0.013027,
+      "cpu_power_w": 13.041,
+      "ram_power_w": 10.0
+    },
+    {
+      "stage": "classification",
+      "rep": 1,
+      "iters": 47,
+      "wall_s": 3.0481,
+      "per_item_ms": 64.8541,
+      "per_item_mwh": 0.764676,
+      "stage_energy_wh": 0.03594,
+      "stage_co2_g": 0.025641,
+      "cpu_power_w": 14.571,
+      "ram_power_w": 10.0
+    },
+    {
+      "stage": "classification",
+      "rep": 2,
+      "iters": 61,
+      "wall_s": 3.0436,
+      "per_item_ms": 49.8948,
+      "per_item_mwh": 0.485377,
+      "stage_energy_wh": 0.029608,
+      "stage_co2_g": 0.021124,
+      "cpu_power_w": 16.205,
+      "ram_power_w": 10.0
+    },
+    {
+      "stage": "embedding",
+      "rep": 1,
+      "iters": 139,
+      "wall_s": 3.018,
+      "per_item_ms": 21.7125,
+      "per_item_mwh": 0.145651,
+      "stage_energy_wh": 0.020246,
+      "stage_co2_g": 0.014444,
+      "cpu_power_w": 15.207,
+      "ram_power_w": 10.0
+    },
+    {
+      "stage": "embedding",
+      "rep": 2,
+      "iters": 127,
+      "wall_s": 3.0064,
+      "per_item_ms": 23.6726,
+      "per_item_mwh": 0.1473,
+      "stage_energy_wh": 0.018707,
+      "stage_co2_g": 0.013346,
+      "cpu_power_w": 11.867,
+      "ram_power_w": 10.0
+    }
+  ],
+  "derived": {
+    "per_classification_mwh": 0.625027,
+    "per_classification_mwh_std": 0.197494,
+    "per_classification_ms": 57.374,
+    "per_classification_ms_std": 10.578,
+    "per_embedding_mwh": 0.146475,
+    "per_embedding_mwh_std": 0.001166,
+    "per_embedding_ms": 22.693,
+    "per_embedding_ms_std": 1.386,
+    "model_load_mwh": 18.2593,
+    "model_load_ms": 2179.13,
+    "per_1000_classifications_wh": 0.62503,
+    "per_1000_classifications_gco2": 0.44592,
+    "per_user_profile_wh": 0.038575,
+    "per_user_profile_gco2": 0.027521,
+    "per_chatbot_reply_wh": 0.300146,
+    "per_chatbot_reply_gco2": 0.214137
+  }
+}

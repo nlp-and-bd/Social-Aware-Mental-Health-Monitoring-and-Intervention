@@ -44,7 +44,13 @@ EMBEDDING_MODEL=all-MiniLM-L6-v2
 Optional blocks (safe to leave blank/default to start):
 
 ```bash
-# RAG via MongoDB Atlas vector search — leave empty to use local ChromaDB
+# RAG via Pinecone (primary)
+PINECONE_API_KEY=
+PINECONE_INDEX=
+PINECONE_CLOUD=aws
+PINECONE_REGION=us-east-1
+
+# Optional: MongoDB Atlas vector search (if set, takes priority over Pinecone)
 MONGODB_VECTOR_INDEX=
 MONGODB_VECTOR_COLLECTION=mental_health_resources
 MONGODB_VECTOR_FIELD=embedding
@@ -89,7 +95,6 @@ INFO:     Uvicorn running on http://127.0.0.1:8002
 ```
 
 - API docs: <http://localhost:8002/docs>
-- The `--reload-dir backend` flag is **mandatory** — without it, ChromaDB writing to `chroma_db/` triggers a full reload mid-startup.
 
 ---
 

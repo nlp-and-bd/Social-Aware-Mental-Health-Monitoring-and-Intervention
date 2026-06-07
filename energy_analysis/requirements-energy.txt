@@ -1,0 +1,2 @@
+# Energy/carbon measurement (primary engine — auto-detects CPU power + grid intensity)
+codecarbon>=3.2.0

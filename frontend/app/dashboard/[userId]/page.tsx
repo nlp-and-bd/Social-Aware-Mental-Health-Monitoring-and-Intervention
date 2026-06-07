@@ -234,7 +234,7 @@ export default function DashboardPage() {
   }
 
   if (loading) return <LoadingScreen />
-  if (showConsent && !isAdmin) return <ConsentScreen userId={userId} onComplete={handleConsentComplete} />
+  if (showConsent && !isAdmin) return <ConsentScreen userId={userId} initialUsername={user?.username} onComplete={handleConsentComplete} />
 
   const sevLabel   = user?.severity_label ?? "Low"
   const sevScore   = Math.round((user?.severity_score ?? 0) * 100)
@@ -246,6 +246,24 @@ export default function DashboardPage() {
   const lastActive = user?.last_active
     ? new Date(user.last_active).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
     : "—"
+
+  // Severity-over-time: per-post severity averaged by post date (falls back to severity_history).
+  const SEV_SCORE: Record<string, number> = { Low: 0.15, Medium: 0.42, High: 0.65, Critical: 0.88 }
+  const severityTrend = (() => {
+    const results = classified?.results ?? []
+    if (results.length === 0) return user?.severity_history ?? []
+    const byDate: Record<string, { sum: number; n: number }> = {}
+    for (const r of results) {
+      const d = r.date || r.post_id.split("_")[1] || (r.timestamp ?? "").slice(0, 10)
+      if (!d || !/^\d{4}-\d{2}-\d{2}/.test(d)) continue
+      const s = SEV_SCORE[r.severity] ?? 0.15
+      byDate[d] = byDate[d] ? { sum: byDate[d].sum + s, n: byDate[d].n + 1 } : { sum: s, n: 1 }
+    }
+    const points = Object.entries(byDate)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, { sum, n }]) => ({ label: "", score: sum / n, timestamp: date }))
+    return points.length ? points : (user?.severity_history ?? [])
+  })()
 
   const trendLabel = evaluation?.trend === "worsening" ? "↑ Worsening"
     : evaluation?.trend === "improving" ? "↓ Improving" : "→ Stable"
@@ -419,9 +437,9 @@ export default function DashboardPage() {
                   <div className="glass rounded-3xl p-5">
                     <div className="flex items-center justify-between mb-4">
                       <p className="text-sm font-semibold text-foreground">Severity over time</p>
-                      <span className="text-xs text-muted-foreground">{user?.severity_history.length ?? 0} data points</span>
+                      <span className="text-xs text-muted-foreground">{severityTrend.length} data points</span>
                     </div>
-                    <SeverityTimeline history={user?.severity_history ?? []} />
+                    <SeverityTimeline history={severityTrend} />
                   </div>
                 </div>
               )}

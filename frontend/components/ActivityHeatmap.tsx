@@ -37,7 +37,7 @@ export function ActivityHeatmap({ results }: { results: PostSeverityResult[] }) 
   // Build a map of date → posts
   const byDate: Record<string, { count: number; severities: string[]; snippets: string[] }> = {}
   results.forEach((r) => {
-    const date = r.post_id.split("_")[1] ?? r.timestamp.slice(0, 10)
+    const date = r.date || r.post_id.split("_")[1] || r.timestamp.slice(0, 10)
     if (!byDate[date]) byDate[date] = { count: 0, severities: [], snippets: [] }
     byDate[date].count++
     byDate[date].severities.push(r.severity)

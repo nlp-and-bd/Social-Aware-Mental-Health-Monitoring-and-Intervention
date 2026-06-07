@@ -6,11 +6,25 @@ class Settings(BaseSettings):
     MONGODB_DB: str = "mental_health_db"
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_BASE_URL: str = ""
+    FALLBACK_API_KEY: str = ""
+    FALLBACK_BASE_URL: str = "https://api.groq.com/openai/v1"
+    FALLBACK_MODEL: str = "meta-llama/llama-4-scout-17b-16e-instruct"
     MENTALBERT_MODEL_PATH: str = "./models/v2"
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
     REDDIT_CLIENT_ID: str = ""
     REDDIT_CLIENT_SECRET: str = ""
+    REDDIT_USER_AGENT: str = "python:penumbra:1.0.0 (by /u/penumbra)"
     REDDIT_REDIRECT_URI: str = "http://localhost:8002/api/auth/callback"
+    REDDIT_OAUTH_SCOPES: str = "identity"
+    REDDIT_RECENT_WINDOW_DAYS: int = 90
+    FRONTEND_BASE_URL: str = "http://localhost:3000"
+
+    # Pinecone
+    PINECONE_API_KEY: str = ""
+    PINECONE_INDEX: str = "mhd"
+    PINECONE_CLOUD: str = "aws"
+    PINECONE_REGION: str = "us-east-1"
 
     # MongoDB Atlas Vector Search
     MONGODB_VECTOR_COLLECTION: str = "mental_health_resources"

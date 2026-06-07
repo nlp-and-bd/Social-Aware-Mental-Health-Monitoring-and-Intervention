@@ -189,7 +189,7 @@ export function ChatInterface({
                   {msg.content}
                 </div>
                 {msg.sources && msg.sources.length > 0 && <Sources sources={msg.sources} />}
-                {msg.crisis && <div className="w-full mt-1"><CrisisPanel /></div>}
+                {msg.crisis && <div className="w-full mt-1"><CrisisPanel userId={userId} contacts={[]} compact /></div>}
               </div>
             </motion.div>
           </div>
@@ -272,7 +272,7 @@ export function ChatInterface({
           <motion.button
             whileHover={{ scale: 1.06 }}
             whileTap={{ scale: 0.94 }}
-            onClick={send}
+            onClick={() => send()}
             disabled={loading || !input.trim()}
             className="w-9 h-9 rounded-xl flex items-center justify-center text-white flex-shrink-0 disabled:opacity-40 transition-opacity"
             style={{ background: "linear-gradient(135deg, #6d28d9, #8b5cf6)" }}

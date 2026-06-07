@@ -21,10 +21,8 @@ CRISIS_REPLY = (
 
 
 async def _build_user_context(user_id: str, user: dict) -> dict:
-    """Fetch the user's severity label + last 5 classified posts for RAG context."""
     posts = await mongo_service.get_all_posts(user_id)
     classified = [p for p in posts if p.get("severity")]
-    # Sort by classified_at descending, take 5 most recent
     classified.sort(key=lambda p: p.get("classified_at") or "", reverse=True)
     recent = classified[:5]
 
@@ -41,6 +39,35 @@ async def _build_user_context(user_id: str, user: dict) -> dict:
             for p in recent
         ],
     }
+
+
+_HISTORY_SCAN_CAP = 200
+
+
+async def _build_personal_context(user_id: str, user: dict, message: str,
+                                  conv_id: str) -> tuple[list[str], list[dict]]:
+    """Semantic RAG over the user's own 90-day posts + relevant prior-session chat turns."""
+    query_vec = rag_service.embed_text(message)
+    if not query_vec:
+        return [], []
+
+    recent_posts = await mongo_service.get_recent_posts(user_id, days=90)
+    top_posts = rag_service.rank_by_similarity(query_vec, recent_posts, k=3, text_key="text")
+    personal_chunks = [p["text"] for p in top_posts if p.get("text")]
+
+    history = (user.get("chat_history") or [])[-_HISTORY_SCAN_CAP:]
+    candidates = []
+    for idx, turn in enumerate(history):
+        if turn.get("role") == "user" and turn.get("conversation_id") != conv_id and turn.get("content"):
+            candidates.append({**turn, "_idx": idx})
+    past_turns: list[dict] = []
+    for hit in rag_service.rank_by_similarity(query_vec, candidates, k=3, text_key="content"):
+        i = hit["_idx"]
+        past_turns.append({"role": "user", "content": hit["content"]})
+        if i + 1 < len(history) and history[i + 1].get("role") == "assistant":
+            past_turns.append({"role": "assistant", "content": history[i + 1]["content"]})
+
+    return personal_chunks, past_turns
 
 
 @router.get("/chat/history/{user_id}", response_model=ChatHistoryResponse)
@@ -72,16 +99,28 @@ async def chat(req: ChatRequest):
             crisis_detected=True,
         )
 
-    # Build user context (severity class + recent posts) for the RAG prompt
     user_context = await _build_user_context(req.user_id, user)
 
-    # Only pass turns from THIS session as LLM context — never bleed old sessions
-    session_history = await mongo_service.get_session_history(req.user_id, conv_id, last_n=6)
+    # CAG: serve this session from the in-memory cache, seeding from MongoDB on a miss.
+    session_history = rag_service.cache_get(conv_id)
+    if session_history is None:
+        seed = await mongo_service.get_session_history(req.user_id, conv_id, last_n=6)
+        rag_service.cache_seed(conv_id, seed)
+        session_history = rag_service.cache_get(conv_id) or []
 
-    result = await rag_service.chat(req.message, session_history, user_context)
+    personal_chunks, past_turns = await _build_personal_context(
+        req.user_id, user, req.message, conv_id
+    )
+
+    result = await rag_service.chat(
+        req.message, session_history, user_context,
+        personal_chunks=personal_chunks, past_turns=past_turns,
+    )
 
     await mongo_service.append_chat_turn(req.user_id, "user", req.message, conv_id)
     await mongo_service.append_chat_turn(req.user_id, "assistant", result["reply"], conv_id)
+    rag_service.cache_append(conv_id, "user", req.message)
+    rag_service.cache_append(conv_id, "assistant", result["reply"])
 
     return ChatResponse(
         reply=result["reply"],

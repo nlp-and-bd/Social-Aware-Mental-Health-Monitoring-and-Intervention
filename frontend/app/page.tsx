@@ -147,7 +147,6 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Reddit login button */}
           <motion.button
             whileHover={{ scale: 1.02, opacity: 0.93 }}
             whileTap={{ scale: 0.97 }}
@@ -210,7 +209,7 @@ export default function Home() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">Continue with Reddit</p>
-                  <p className="text-[11px] text-muted-foreground">Enter your Reddit username to sign in</p>
+                  <p className="text-[11px] text-muted-foreground">Enter a Reddit username to load their recent public posts</p>
                 </div>
               </div>
 
@@ -254,12 +253,12 @@ export default function Home() {
                   className="flex-1 rounded-xl py-2.5 text-sm font-bold text-white disabled:opacity-50 transition-opacity"
                   style={{ background: "#FF4500" }}
                 >
-                  {loading ? "Signing in…" : "Continue"}
+                  {loading ? "Fetching posts…" : "Continue"}
                 </motion.button>
               </div>
 
               <p className="text-center text-[10px] text-muted-foreground/50 leading-relaxed">
-                This is a simulated login for the demo. No Reddit data is accessed.
+                Reads only public Reddit posts from the last 90 days. This may take a few seconds.
               </p>
             </motion.div>
           </motion.div>
